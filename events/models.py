@@ -92,8 +92,7 @@ class Seat(models.Model):
     ticket_type = models.ForeignKey(TicketType, on_delete=models.CASCADE, related_name='seats')
     seat_name = models.CharField(max_length=100) # Tên ghế: ví dụ A1, B5
     status = models.CharField(max_length=50, choices=SeatStatusEnum.choices, default=SeatStatusEnum.AVAILABLE)
-    locked_until = models.DateTimeField(null=True, blank=True) # Phục vụ nghiệp vụ khóa ghế 10 phút thanh toán
-
+    locked_until = models.DateTimeField(null=True, blank=True) # Phục vụ nghiệp vụ khóa ghế 
     class Meta:
         constraints = [
             UniqueConstraint(fields=['event', 'seat_name'], name='unique_seat_per_event')
