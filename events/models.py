@@ -49,7 +49,6 @@ class User(models.Model):
         return f"{self.username} ({self.type})"
 
 class Customer(models.Model):
-    # Dùng OneToOneField và primary_key=True để triển khai cơ chế kế thừa đa hình kế thừa từ bảng User
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True, related_name='customer_profile')
     tier = models.CharField(max_length=20, choices=CustomerTierEnum.choices, default=CustomerTierEnum.MEMBER)
 
@@ -77,7 +76,7 @@ class Event(models.Model):
 
 class TicketType(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='ticket_types')
-    name = models.CharField(max_length=50) # VIP, Standard, Early Bird
+    name = models.CharField(max_length=50) 
     price = models.DecimalField(max_digits=10, decimal_places=2)
     total_quantity = models.IntegerField()
 
@@ -90,7 +89,7 @@ class TicketType(models.Model):
 class Seat(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='seats')
     ticket_type = models.ForeignKey(TicketType, on_delete=models.CASCADE, related_name='seats')
-    seat_name = models.CharField(max_length=100) # Tên ghế: ví dụ A1, B5
+    seat_name = models.CharField(max_length=100) 
     status = models.CharField(max_length=50, choices=SeatStatusEnum.choices, default=SeatStatusEnum.AVAILABLE)
     locked_until = models.DateTimeField(null=True, blank=True) # Phục vụ nghiệp vụ khóa ghế 
     class Meta:
