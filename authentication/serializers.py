@@ -4,9 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from events.models import User, Customer, Organizer, UserType, CustomerTierEnum
-
-
+from authentication.models import User, Customer, Organizer, UserType, CustomerTierEnum
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -31,17 +29,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         user_type = attrs.get('type')
-
         if user_type == UserType.ORGANIZER:
             errors = {}
             if not attrs.get('company_name'):
-                errors['company_name'] = 'Tên công ty là bắt buộc cho người tổ chức.'
+                errors['company_name'] = 'Bắt buộc nhập tên công ty đối với Nhà tổ chức.'
             if not attrs.get('bank_account'):
-                errors['bank_account'] = 'Số tài khoản ngân hàng là bắt buộc cho người tổ chức.'
-
+                errors['bank_account'] = 'Bắt buộc nhập số tài khoản ngân hàng đối với Nhà tổ chức.'
             if errors:
                 raise serializers.ValidationError(errors)
-
         return attrs
 
     @transaction.atomic
@@ -60,9 +55,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                 company_name=company_name, 
                 bank_account=bank_account
             )
-
         return user
-
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

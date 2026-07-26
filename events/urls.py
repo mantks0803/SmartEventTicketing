@@ -1,9 +1,12 @@
 from django.urls import path
-from events.views import RegisterView, CustomTokenObtainPairView
-from rest_framework_simplejwt.views import TokenRefreshView
+from events.views import EventListView, EventDetailView, OrganizerEventCreateView, OrganizerEventListView
 
 urlpatterns = [
-    path('auth/register/', RegisterView.as_view(), name='register'),
-    path('auth/login/', CustomTokenObtainPairView.as_view(), name='login'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Public
+    path('', EventListView.as_view(), name='event_list'),
+    path('<int:pk>/', EventDetailView.as_view(), name='event_detail'),
+    
+    # Organizer
+    path('organizer/list/', OrganizerEventListView.as_view(), name='organizer_event_list'),
+    path('organizer/create/', OrganizerEventCreateView.as_view(), name='organizer_event_create'),
 ]
