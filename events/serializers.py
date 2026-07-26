@@ -1,19 +1,12 @@
 from rest_framework import serializers
 from django.db import transaction
-from events.models import Event, TicketType, Seat, Order, Ticket, User,  Organizer
-
+from events.models import Event, TicketType
+from seating.models import Seat  # Import Seat từ app seating
 
 class TicketTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TicketType
-        fields = ['id', 'event', 'name', 'price', 'quantity']
-
-class SeatSerializer(serializers.ModelSerializer):
-    ticket_type_name = serializers.CharField(source='ticket_type.name', read_only=True)
-    price = serializers.DecimalField(source='ticket_type.price', max_digits=12, decimal_places=2, read_only=True)
-    class Meta:
-        model = Seat
-        fields = ['id', 'row', 'number', 'event', 'status','ticket_type','ticket_type_name']
+        fields = ['id', 'name', 'price', 'quantity']
 
 class EventListSerializer(serializers.ModelSerializer):
     organizer_name = serializers.CharField(source='organizer.company_name', read_only=True)
@@ -21,57 +14,43 @@ class EventListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = [
-            'id', 'title', 'banner_url', 'location', 
-            'start_time', 'organizer_name', 'min_price', 'status'
-        ]
+        fields = ['id', 'title', 'banner_url', 'location', 'start_time', 'organizer_name', 'min_price', 'status']
 
     def get_min_price(self, obj):
-        """Lấy giá vé thấp nhất của sự kiện để hiển thị 'Từ ... VNĐ'"""
         ticket_types = obj.ticket_types.all()
         if ticket_types.exists():
             return min(tt.price for tt in ticket_types)
         return 0
+
 class EventDetailSerializer(serializers.ModelSerializer):
     organizer_name = serializers.CharField(source='organizer.company_name', read_only=True)
     ticket_types = TicketTypeSerializer(many=True, read_only=True)
 
     class Meta:
         model = Event
-        fields = [
-            'id', 'title', 'description', 'banner_url', 'location', 
-            'start_time', 'end_time', 'status', 'organizer_name', 'ticket_types'
-        ]
-    ##5 incomming
+        fields = ['id', 'title', 'description', 'banner_url', 'location', 'start_time', 'end_time', 'status', 'organizer_name', 'ticket_types']
+
 class TicketTypeCreateInputSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=255)
+    name = serializers.CharField(max_length=100)
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
-    total_rows = serializers.IntegerField(min_value=1, max_value=26)  #?
-    seats_per_row = serializers.IntegerField(min_value=1, max_value=100)  #?
-    row_prefix = serializers.CharField(max_length=5, default='A')  #Chữ cái bắt đầu
+    total_rows = serializers.IntegerField(min_value=1, max_value=26)
+    seats_per_row = serializers.IntegerField(min_value=1, max_value=50)
+    row_prefix = serializers.CharField(max_length=5, default="A")
 
 class EventCreateSerializer(serializers.ModelSerializer):
     ticket_types_input = TicketTypeCreateInputSerializer(many=True, write_only=True)
 
     class Meta:
         model = Event
-        fields = [
-            'id', 'title', 'description', 'banner_url', 
-            'location', 'start_time', 'end_time', 'ticket_types_input'
-        ]
+        fields = ['id', 'title', 'description', 'banner_url', 'location', 'start_time', 'end_time', 'ticket_types_input']
 
     @transaction.atomic
     def create(self, validated_data):
         ticket_types_data = validated_data.pop('ticket_types_input')
-        
         request = self.context.get('request')
         organizer = request.user.organizer
 
-        event = Event.objects.create(
-            organizer=organizer, 
-            status='PENDING', 
-            **validated_data
-        )
+        event = Event.objects.create(organizer=organizer, status='PENDING', **validated_data)
 
         for tt_data in ticket_types_data:
             name = tt_data['name']
@@ -101,10 +80,9 @@ class EventCreateSerializer(serializers.ModelSerializer):
                             ticket_type=ticket_type,
                             row=row_label,
                             number=str(c_num),
-                            status='AVAILABLE' 
+                            status='AVAILABLE'
                         )
                     )
-            
             Seat.objects.bulk_create(seats_to_create)
 
         return event
