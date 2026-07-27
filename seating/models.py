@@ -11,6 +11,7 @@ class Seat(models.Model):
     row = models.CharField(max_length=10)
     number = models.CharField(max_length=10)
     status = models.CharField(max_length=20, choices=SeatStatusEnum.choices, default=SeatStatusEnum.AVAILABLE)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.event.title} - {self.row}{self.number} ({self.status})"
