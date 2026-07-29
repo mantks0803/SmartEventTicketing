@@ -22,3 +22,4 @@ class HoldSeatsInputSerializer(serializers.Serializer):
         child=serializers.IntegerField(),
         allow_empty=False
     )
+

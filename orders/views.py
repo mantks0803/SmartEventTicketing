@@ -2,13 +2,24 @@ import uuid
 from datetime import timedelta
 from django.utils import timezone
 from django.db import transaction
+from django.conf import settings
 from rest_framework import generics, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+
+from payos import PayOS
+from payos.type import ItemData, PaymentData
+
 from common.permissions import IsCustomerPermission
 from seating.models import Seat
 from orders.models import Order, Ticket
 from orders.serializers import OrderSerializer, HoldSeatsInputSerializer
+
+payos = PayOS(
+    client_id=settings.PAYOS_CLIENT_ID,
+    api_key=settings.PAYOS_API_KEY,
+    checksum_key=settings.PAYOS_CHECKSUM_KEY
+)
 
 class HoldSeatsView(APIView):
     permission_classes = [IsCustomerPermission]
@@ -123,3 +134,91 @@ class CancelOrderView(APIView):
                 seat.save()
 
         return Response({"message": "Hủy đơn hàng và nhả ghế thành công."}, status=status.HTTP_200_OK)
+
+class CreatePayOSPaymentView(APIView):
+    permission_classes = [IsCustomerPermission]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(pk=order_id, customer=request.user.customer)
+        except Order.DoesNotExist:
+            return Response({"detail": "Đơn hàng không tồn tại."}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.status != 'PENDING':
+            return Response({"detail": "Đơn hàng không ở trạng thái chờ thanh toán."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cutoff_time = timezone.now() - timedelta(minutes=10)
+        if order.created_at < cutoff_time:
+            order.status = 'CANCELLED'
+            order.save()
+            for ticket in order.tickets.all():
+                ticket.seat.status = 'AVAILABLE'
+                ticket.seat.save()
+            return Response({"detail": "Đơn hàng đã hết hạn giữ chỗ (10 phút). Vui lòng đặt lại ghế."}, status=status.HTTP_400_BAD_REQUEST)
+
+        items = []
+        for ticket in order.tickets.all():
+            items.append(
+                ItemData(
+                    name=f"Ve {ticket.seat.row}{ticket.seat.number}",
+                    quantity=1,
+                    price=int(ticket.ticket_type.price)
+                )
+            )
+
+        payment_data = PaymentData(
+            orderCode=order.id,
+            amount=int(order.total_amount),
+            description=f"Thanh toan don #{order.id}"[:25],
+            items=items,
+            cancelUrl="http://localhost:5173/payment/cancel",
+            returnUrl="http://localhost:5173/payment/success"
+        )
+
+        try:
+            payos_response = payos.createPaymentLink(payment_data)
+            return Response(
+                {
+                    "checkout_url": payos_response.checkoutUrl,
+                    "qr_code": payos_response.qrCode,
+                    "order_id": order.id
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response({"detail": f"Lỗi tạo link PayOS: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PayOSWebhookView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+
+    #Need to add PostMan testing with PayOS signature in the header for webhook testing :D 
+    
+    @transaction.atomic
+    def post(self, request):
+        webhook_body = request.data
+
+        try:
+            verified_data = payos.verifyPaymentWebhookData(webhook_body)
+            
+            if verified_data.code == '00':
+                order_id = verified_data.orderCode
+                
+                try:
+                    order = Order.objects.select_for_update().get(pk=order_id)
+                except Order.DoesNotExist:
+                    return Response({"detail": "Order không tồn tại"}, status=status.HTTP_404_NOT_FOUND)
+
+                if order.status == 'PENDING':
+                    order.status = 'PAID'
+                    order.save()
+
+                    for ticket in order.tickets.all():
+                        seat = ticket.seat
+                        seat.status = 'SOLD'
+                        seat.save()
+
+            return Response({"status": "success"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
