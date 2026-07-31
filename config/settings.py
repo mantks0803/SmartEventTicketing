@@ -135,3 +135,12 @@ PAYOS_CHECKSUM_KEY = "8259d4572d80301fb2757a36a6f1ab3eb2a2621bc4980db04066a122aa
 
 # FRONTEND CONFIGURATION
 FRONTEND_URL = "http://localhost:5173"  
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'dephucau@gmail.com'
+EMAIL_HOST_PASSWORD = 'atum ecoc tcmx yitv'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

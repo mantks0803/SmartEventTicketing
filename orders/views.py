@@ -11,10 +11,14 @@ from rest_framework.response import Response
 from payos import PayOS
 from payos.type import ItemData, PaymentData
 
-from common.permissions import IsCustomerPermission
+from common.permissions import IsCustomerPermission, IsOrganizerPermission
 from seating.models import Seat
 from orders.models import Order, Ticket, Payment
-from orders.serializers import OrderSerializer, HoldSeatsInputSerializer
+from orders.serializers import (
+    OrderSerializer, HoldSeatsInputSerializer, 
+    CustomerTicketSerializer, CheckInInputSerializer
+)
+from orders.utils import send_payment_success_email
 
 logger = logging.getLogger(__name__)
 
@@ -259,6 +263,8 @@ class PayOSWebhookView(APIView):
                         seat = ticket.seat
                         seat.status = 'SOLD'
                         seat.save()
+
+                    send_payment_success_email(order)
             else:
                 if order.status == 'PENDING':
                     order.status = 'CANCELLED'
@@ -282,3 +288,52 @@ class PayOSWebhookView(APIView):
         except Exception as e:
             logger.error(f"PayOS Webhook processing failed: {str(e)}")
             return Response({"detail": "Xử lý webhook thất bại."}, status=status.HTTP_400_BAD_REQUEST)
+
+class CustomerTicketListView(generics.ListAPIView):
+    permission_classes = [IsCustomerPermission]
+    serializer_class = CustomerTicketSerializer
+
+    def get_queryset(self):
+        return Ticket.objects.filter(
+            order__customer=self.request.user.customer,
+            order__status='PAID'
+        ).select_related('seat', 'seat__event', 'ticket_type').order_by('-order__created_at')
+
+class CheckInView(APIView):
+    permission_classes = [IsOrganizerPermission]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = CheckInInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        qr_code = serializer.validated_data['qr_code']
+
+        try:
+            ticket = Ticket.objects.select_for_update().select_related(
+                'order', 'order__customer', 'order__customer__user', 'seat', 'seat__event', 'ticket_type'
+            ).get(qr_code=qr_code)
+        except Ticket.DoesNotExist:
+            return Response({"detail": "Mã vé không tồn tại hoặc không hợp lệ."}, status=status.HTTP_404_NOT_FOUND)
+
+        if ticket.seat.event.organizer != request.user.organizer:
+            return Response({"detail": "Bạn không có quyền soát vé cho sự kiện này."}, status=status.HTTP_403_FORBIDDEN)
+
+        if ticket.order.status != 'PAID':
+            return Response({"detail": "Vé chưa được thanh toán."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if ticket.is_checked_in:
+            return Response({"detail": "CẢNH BÁO: Vé này đã được check-in trước đó!"}, status=status.HTTP_400_BAD_REQUEST)
+
+        ticket.is_checked_in = True
+        ticket.save()
+
+        return Response(
+            {
+                "message": "Check-in thành công! Mời khách vào cổng.",
+                "customer_name": ticket.order.customer.user.name,
+                "event_title": ticket.seat.event.title,
+                "seat": f"{ticket.seat.row}{ticket.seat.number}",
+                "ticket_type": ticket.ticket_type.name
+            },
+            status=status.HTTP_200_OK
+        )

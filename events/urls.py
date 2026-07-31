@@ -1,12 +1,13 @@
 from django.urls import path
-from events.views import EventListView, EventDetailView, OrganizerEventCreateView, OrganizerEventListView
+from events.views import (
+    EventListView, EventDetailView, 
+    OrganizerEventCreateView, OrganizerEventListView, OrganizerDashboardView
+)
 
 urlpatterns = [
-    # Public
     path('', EventListView.as_view(), name='event_list'),
     path('<int:pk>/', EventDetailView.as_view(), name='event_detail'),
-    
-    # Organizer
-    path('organizer/list/', OrganizerEventListView.as_view(), name='organizer_event_list'),
-    path('organizer/create/', OrganizerEventCreateView.as_view(), name='organizer_event_create'),
+    path('organizer/create/', OrganizerEventCreateView.as_view(), name='organizer_create_event'),
+    path('organizer/my-events/', OrganizerEventListView.as_view(), name='organizer_my_events'),
+    path('organizer/dashboard/', OrganizerDashboardView.as_view(), name='organizer_dashboard'),
 ]
