@@ -337,5 +337,3 @@ class CheckInView(APIView):
             },
             status=status.HTTP_200_OK
         )
-class CheckInAPIVIEW2(APIView):
-    ...
