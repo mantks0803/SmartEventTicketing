@@ -36,7 +36,7 @@
         <!-- Dynamic Menu bên phải -->
         <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
           <li class="nav-item">
-            <router-link to="/" class="nav-link text-light">Trang chủ</router-link>
+            <router-link to="/" class="nav-link text-light">Vé của tôi</router-link>
           </li>
 
           <!-- Khi chưa đăng nhập -->

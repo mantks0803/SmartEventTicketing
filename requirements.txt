@@ -12,6 +12,7 @@ distro==1.9.0
 Django==6.0.7
 django-cors-headers==4.9.0
 djangorestframework==3.17.1
+djangorestframework_simplejwt==5.5.1
 frozenlist==1.8.0
 greenlet==3.5.3
 h11==0.16.0
@@ -40,11 +41,13 @@ openai==2.45.0
 orjson==3.11.9
 ormsgpack==1.12.2
 packaging==26.2
+payos==1.1.0
 propcache==0.5.2
 psycopg2-binary==2.9.12
 pydantic==2.13.4
 pydantic-settings==2.14.2
 pydantic_core==2.46.4
+PyJWT==2.13.0
 python-dotenv==1.2.2
 PyYAML==6.0.3
 regex==2026.7.10
