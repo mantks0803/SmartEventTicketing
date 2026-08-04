@@ -23,7 +23,6 @@
           <div class="d-flex gap-2 align-items-center">
             <span class="badge bg-primary fs-6">PayOS</span>
             <span class="badge bg-success fs-6">VietQR</span>
-            <span class="badge bg-danger fs-6">Napas247</span>
           </div>
         </div>
       </div>

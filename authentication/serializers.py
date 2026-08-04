@@ -1,68 +1,79 @@
 from rest_framework import serializers
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.password_validation import validate_password
-from django.db import transaction
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.contrib.auth import get_user_model
+from .models import Customer, Organizer
 
-from authentication.models import User, Customer, Organizer, UserType, CustomerTierEnum
+User = get_user_model()
 
-class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    company_name = serializers.CharField(required=False, allow_blank=True)
-    bank_account = serializers.CharField(required=False, allow_blank=True)
+class CustomerRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
         model = User
-        fields = [
-            'name', 'email', 'phone_number', 'username', 
-            'password', 'dob', 'type', 'company_name', 'bank_account'
-        ]
+        fields = ['name', 'username', 'email', 'phone_number', 'dob', 'password']
+        extra_kwargs = {
+            'dob': {'required': False, 'allow_null': True},
+            'phone_number': {'required': False, 'allow_null': True}
+        }
 
-    def validate_type(self, value):
-        if value not in [UserType.CUSTOMER, UserType.ORGANIZER]:
-            raise serializers.ValidationError("Loại tài khoản không hợp lệ khi tự đăng ký!")
-        return value
-
-    def validate_password(self, value):
-        validate_password(value)
-        return value
-
-    def validate(self, attrs):
-        user_type = attrs.get('type')
-        if user_type == UserType.ORGANIZER:
-            errors = {}
-            if not attrs.get('company_name'):
-                errors['company_name'] = 'Bắt buộc nhập tên công ty đối với Nhà tổ chức.'
-            if not attrs.get('bank_account'):
-                errors['bank_account'] = 'Bắt buộc nhập số tài khoản ngân hàng đối với Nhà tổ chức.'
-            if errors:
-                raise serializers.ValidationError(errors)
-        return attrs
-
-    @transaction.atomic
     def create(self, validated_data):
-        company_name = validated_data.pop('company_name', None)
-        bank_account = validated_data.pop('bank_account', None)
+        password = validated_data.pop('password')
+        if 'dob' in validated_data and not validated_data['dob']:
+            validated_data['dob'] = None
 
-        validated_data['password'] = make_password(validated_data['password'])
-        user = User.objects.create(**validated_data)
+        validated_data['type'] = 'CUSTOMER'
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
 
-        if user.type == UserType.CUSTOMER:
-            Customer.objects.create(user=user, tier=CustomerTierEnum.MEMBER)
-        elif user.type == UserType.ORGANIZER:
-            Organizer.objects.create(
-                user=user, 
-                company_name=company_name, 
-                bank_account=bank_account
-            )
+        Customer.objects.get_or_create(user=user)
         return user
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    @classmethod
-    def get_token(cls, user):
-        token = super().get_token(user)
-        token['id'] = user.id
-        token['username'] = user.username
-        token['email'] = user.email
-        token['type'] = str(user.type)
-        return token
+
+class OrganizerRegisterSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(required=True, write_only=True)
+    bank_account = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(write_only=True, min_length=6)
+
+    class Meta:
+        model = User
+        fields = ['name', 'username', 'email', 'phone_number', 'company_name', 'bank_account', 'password']
+
+    def create(self, validated_data):
+        company_name = validated_data.pop('company_name', '')
+        bank_account = validated_data.pop('bank_account', '')
+        password = validated_data.pop('password')
+
+        validated_data['type'] = 'ORGANIZER'
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+
+        Organizer.objects.update_or_create(
+            user=user,
+            defaults={
+                'company_name': company_name,
+                'bank_account': bank_account
+            }
+        )
+        return user
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.CharField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        username_or_email = attrs.get('email')
+        password = attrs.get('password')
+
+        user = User.objects.filter(email=username_or_email).first()
+        if not user:
+            user = User.objects.filter(username=username_or_email).first()
+
+        if user and user.check_password(password):
+            if not user.is_active:
+                raise serializers.ValidationError('Tài khoản đã bị khóa.')
+            attrs['user'] = user
+            return attrs
+
+        raise serializers.ValidationError('Tên đăng nhập/Email hoặc mật khẩu không chính xác.')
