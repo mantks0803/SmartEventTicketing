@@ -1,4 +1,5 @@
 from django.db import models
+from events.models import Event, TicketType
 
 class SeatStatusEnum(models.TextChoices):
     AVAILABLE = 'AVAILABLE', 'Available'
@@ -6,12 +7,21 @@ class SeatStatusEnum(models.TextChoices):
     SOLD = 'SOLD', 'Sold'
 
 class Seat(models.Model):
-    event = models.ForeignKey('events.Event', on_delete=models.CASCADE, related_name='seats')
-    ticket_type = models.ForeignKey('events.TicketType', on_delete=models.CASCADE, related_name='seats')
-    row = models.CharField(max_length=10)
-    number = models.CharField(max_length=10)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='seats')
+    ticket_type = models.ForeignKey(TicketType, on_delete=models.CASCADE, related_name='seats')
+    row = models.CharField(max_length=20, default='A')
+    number = models.IntegerField(default=1)
+    seat_name = models.CharField(max_length=50, blank=True)
     status = models.CharField(max_length=20, choices=SeatStatusEnum.choices, default=SeatStatusEnum.AVAILABLE)
-    updated_at = models.DateTimeField(auto_now=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('event', 'row', 'number')
+
+    def save(self, *args, **kwargs):
+        if not self.seat_name:
+            self.seat_name = f"{self.row}-{self.number}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.event.title} - {self.row}{self.number} ({self.status})"
