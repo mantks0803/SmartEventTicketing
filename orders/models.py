@@ -12,6 +12,7 @@ class PaymentStatusEnum(models.TextChoices):
 
 class Order(models.Model):
     customer = models.ForeignKey('authentication.Customer', on_delete=models.CASCADE, related_name='orders')
+    event = models.ForeignKey('events.Event', on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=20, choices=OrderStatusEnum.choices, default=OrderStatusEnum.PENDING)
     payos_checkout_url = models.CharField(max_length=500, null=True, blank=True)
