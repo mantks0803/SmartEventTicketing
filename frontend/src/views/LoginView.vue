@@ -2,7 +2,6 @@
   <div class="auth-container d-flex align-items-center justify-content-center py-5">
     <div class="card auth-card shadow-lg border-0 rounded-4 w-100">
       <div class="card-body p-4 p-sm-5">
-        <!-- Header -->
         <div class="text-center mb-4">
           <div class="icon-circle bg-primary-subtle text-primary mb-3 mx-auto">
             <i class="bi bi-box-arrow-in-right fs-3"></i>
@@ -11,15 +10,7 @@
           <p class="text-muted small">Chào mừng bạn quay trở lại với SmartTicket</p>
         </div>
 
-        <!-- Thông báo lỗi khi 401 hoặc lỗi server -->
-        <div v-if="errorMessage" class="alert alert-danger alert-dismissible fade show mb-4 small" role="alert">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMessage }}
-          <button type="button" class="btn-close" @click="errorMessage = ''"></button>
-        </div>
-
-        <!-- Form Đăng nhập -->
         <form @submit.prevent="handleLogin" novalidate>
-          <!-- Email / Username -->
           <div class="mb-3">
             <label class="form-label fw-semibold small">Tên đăng nhập hoặc Email</label>
             <div class="input-group">
@@ -36,7 +27,6 @@
             </div>
           </div>
 
-          <!-- Password với Icon con mắt -->
           <div class="mb-4">
             <label class="form-label fw-semibold small">Mật khẩu</label>
             <div class="input-group">
@@ -60,10 +50,9 @@
             </div>
           </div>
 
-          <!-- Button Submit -->
           <button
             type="submit"
-            class="btn btn-primary w-100 py-2.5 fw-bold rounded-pill mb-3"
+            class="btn btn-primary-custom w-100 py-2.5 fw-bold rounded-pill mb-3"
             :disabled="isSubmitting"
           >
             <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
@@ -71,7 +60,6 @@
           </button>
         </form>
 
-        <!-- Footer link -->
         <div class="text-center mt-3">
           <span class="text-muted small">Chưa có tài khoản? </span>
           <router-link to="/register" class="text-primary text-decoration-none fw-semibold small">
@@ -87,6 +75,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import Swal from 'sweetalert2'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -94,14 +83,12 @@ const route = useRoute()
 
 const showPassword = ref(false)
 const isSubmitting = ref(false)
-const errorMessage = ref('')
 
 const form = reactive({
   email: '',
   password: ''
 })
 
-// Prefill từ query param nếu có
 onMounted(() => {
   if (route.query.prefill) {
     form.email = route.query.prefill
@@ -109,10 +96,14 @@ onMounted(() => {
 })
 
 const handleLogin = async () => {
-  errorMessage.value = ''
-
   if (!form.email || !form.password) {
-    errorMessage.value = 'Vui lòng điền đầy đủ Tên đăng nhập/Email và Mật khẩu.'
+    Swal.fire({
+      title: 'Thiếu thông tin',
+      text: 'Vui lòng điền đầy đủ Tên đăng nhập/Email và Mật khẩu.',
+      icon: 'warning',
+      confirmButtonColor: '#2563EB',
+      customClass: { popup: 'rounded-4' }
+    })
     return
   }
 
@@ -126,6 +117,15 @@ const handleLogin = async () => {
   isSubmitting.value = false
 
   if (result.success) {
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Đăng nhập thành công!',
+      showConfirmButton: false,
+      timer: 1500
+    })
+
     const redirectPath = route.query.redirect
     if (redirectPath) {
       router.push(redirectPath)
@@ -135,8 +135,13 @@ const handleLogin = async () => {
       router.push('/')
     }
   } else {
-    // Báo lỗi 401 nhưng GIỮ NGUYÊN dữ liệu form
-    errorMessage.value = result.message
+    Swal.fire({
+      title: 'Đăng nhập thất bại',
+      text: result.message || 'Tài khoản hoặc mật khẩu không chính xác.',
+      icon: 'error',
+      confirmButtonColor: '#2563EB',
+      customClass: { popup: 'rounded-4' }
+    })
   }
 }
 </script>
@@ -161,9 +166,5 @@ const handleLogin = async () => {
 
 .btn-toggle-eye {
   cursor: pointer;
-}
-
-.btn-toggle-eye:hover {
-  color: #4f46e5 !important;
 }
 </style>

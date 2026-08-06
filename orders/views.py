@@ -6,14 +6,26 @@ from django.db import transaction
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions, generics
+
 from orders.models import Order, OrderStatusEnum, Ticket
 from orders.serializers import (
     OrderSerializer, CustomerTicketSerializer, 
     HoldSeatsInputSerializer, CheckInInputSerializer
 )
 from seating.models import Seat, SeatStatusEnum
-from authentication.permissions import IsCustomerPermission
+from authentication.permissions import IsCustomerPermission, IsOrganizerPermission
 from .utils import send_payment_success_email
+
+try:
+    from payos import PayOS, ItemData, PaymentData
+    payos = PayOS(
+        client_id=getattr(settings, 'PAYOS_CLIENT_ID', ''),
+        api_key=getattr(settings, 'PAYOS_API_KEY', ''),
+        checksum_key=getattr(settings, 'PAYOS_CHECKSUM_KEY', '')
+    )
+except ImportError:
+    payos = None
+
 
 class HoldSeatsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
@@ -72,27 +84,40 @@ class HoldSeatsView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 class CustomerOrderListView(generics.ListAPIView):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
 
     def get_queryset(self):
-        return Order.objects.filter(customer=self.request.user.customer).order_by('-created_at')
+        customer = getattr(self.request.user, 'customer', None)
+        if not customer:
+            return Order.objects.none()
+        return Order.objects.filter(customer=customer).order_by('-created_at')
+
 
 class OrderDetailView(generics.RetrieveAPIView):
     serializer_class = OrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
 
     def get_queryset(self):
-        return Order.objects.all()
+        customer = getattr(self.request.user, 'customer', None)
+        if not customer:
+            return Order.objects.none()
+        return Order.objects.filter(customer=customer)
+
 
 class CancelOrderView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
 
     def post(self, request, pk):
+        customer = getattr(request.user, 'customer', None)
+        if not customer:
+            return Response({'error': 'Tài khoản không phải là khách hàng.'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             with transaction.atomic():
-                order = Order.objects.select_for_update().get(id=pk)
+                order = Order.objects.select_for_update().get(id=pk, customer=customer)
                 if order.status != OrderStatusEnum.PENDING:
                     return Response({'error': 'Chỉ có thể hủy đơn hàng đang chờ thanh toán.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -105,34 +130,58 @@ class CancelOrderView(APIView):
 
             return Response({'message': 'Đã hủy đơn hàng thành công.'}, status=status.HTTP_200_OK)
         except Order.DoesNotExist:
-            return Response({'error': 'Không tìm thấy đơn hàng.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Không tìm thấy đơn hàng hoặc bạn không có quyền hủy đơn này.'}, status=status.HTTP_404_NOT_FOUND)
+
 
 class CreatePayOSPaymentView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
 
     def post(self, request, order_id):
+        customer = getattr(request.user, 'customer', None)
         try:
-            order = Order.objects.get(id=order_id, customer=request.user.customer)
+            order = Order.objects.get(id=order_id, customer=customer)
             if order.status != OrderStatusEnum.PENDING:
                 return Response({'error': 'Đơn hàng không ở trạng thái chờ thanh toán.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            checkout_url = f"{settings.FRONTEND_URL}/payment-mock/{order.id}"
+            if getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False) or not payos:
+                checkout_url = f"{settings.FRONTEND_URL}/payment-mock/{order.id}"
+            else:
+                # Tạo link thanh toán PayOS thật
+                domain = settings.FRONTEND_URL
+                payment_data = PaymentData(
+                    orderCode=order.id,
+                    amount=int(order.total_amount),
+                    description=f"Thanh toan don #{order.id}"[:25],
+                    items=[],
+                    cancelUrl=f"{domain}/my-orders",
+                    returnUrl=f"{domain}/my-tickets"
+                )
+                payos_response = payos.createPaymentLink(payment_data)
+                checkout_url = payos_response.checkoutUrl
+
             order.payos_checkout_url = checkout_url
             order.save()
 
             return Response({'checkoutUrl': checkout_url}, status=status.HTTP_200_OK)
         except Order.DoesNotExist:
             return Response({'error': 'Không tìm thấy đơn hàng.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': f'Lỗi cổng thanh toán: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class CustomerTicketListView(generics.ListAPIView):
     serializer_class = CustomerTicketSerializer
     permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
 
     def get_queryset(self):
-        return Ticket.objects.filter(order__customer=self.request.user.customer, order__status=OrderStatusEnum.PAID).order_by('-id')
+        customer = getattr(self.request.user, 'customer', None)
+        if not customer:
+            return Ticket.objects.none()
+        return Ticket.objects.filter(order__customer=customer, order__status=OrderStatusEnum.PAID).order_by('-id')
+
 
 class CheckInView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOrganizerPermission]
 
     def post(self, request):
         serializer = CheckInInputSerializer(data=request.data)
@@ -140,8 +189,16 @@ class CheckInView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         qr_code = serializer.validated_data['qr_code']
+        organizer = getattr(request.user, 'organizer', None)
+        if not organizer:
+            return Response({'error': 'Tài khoản không phải Ban tổ chức.'}, status=status.HTTP_403_FORBIDDEN)
+
         try:
-            ticket = Ticket.objects.get(qr_code=qr_code)
+            ticket = Ticket.objects.select_related('seat__event__organizer').get(qr_code=qr_code)
+            
+            if ticket.seat.event.organizer != organizer:
+                return Response({'error': 'Bạn không có quyền soát vé cho sự kiện của Ban tổ chức khác!'}, status=status.HTTP_403_FORBIDDEN)
+
             if ticket.is_checked_in:
                 return Response({'error': 'Vé này đã được soát vé trước đó!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -151,21 +208,27 @@ class CheckInView(APIView):
         except Ticket.DoesNotExist:
             return Response({'error': 'Mã vé QR không hợp lệ hoặc không tồn tại.'}, status=status.HTTP_404_NOT_FOUND)
 
+
 class PayOSWebhookView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         payload = request.data
 
-        if not getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False):
-            pass
+        if not getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False) and payos:
+            try:
+                verified_data = payos.verifyPaymentWebhookData(payload)
+                data = verified_data.to_dict() if hasattr(verified_data, 'to_dict') else payload.get('data', {})
+            except Exception as e:
+                return Response({'error': f'Chữ ký Webhook không hợp lệ: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            data = payload.get('data', {})
 
-        data = payload.get('data', {})
         order_id = data.get('orderCode')
         success = payload.get('success', False) or payload.get('code') == '00'
 
         if not order_id:
-            return Response({'error': 'Thiếu orderCode'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Thiếu orderCode trong payload'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
