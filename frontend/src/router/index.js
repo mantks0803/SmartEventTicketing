@@ -4,6 +4,10 @@ import { useAuthStore } from '@/stores/auth'
 import HomeView from '@/views/HomeView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
+import EventDetailView from '@/views/EventDetailView.vue'
+import CheckoutView from '@/views/CheckoutView.vue'
+import MyTicketsView from '@/views/MyTicketsView.vue'
+import OrganizerDashboardView from '@/views/OrganizerDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,6 +16,17 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView
+    },
+    {
+      path: '/events/:id',
+      name: 'event-detail',
+      component: EventDetailView
+    },
+    {
+      path: '/checkout/:orderId',
+      name: 'checkout',
+      component: CheckoutView,
+      meta: { requiresAuth: true, role: 'CUSTOMER' }
     },
     {
       path: '/login',
@@ -28,22 +43,23 @@ const router = createRouter({
     {
       path: '/my-tickets',
       name: 'my-tickets',
-      component: () => import('@/views/HomeView.vue'),
+      component: MyTicketsView,
       meta: { requiresAuth: true, role: 'CUSTOMER' }
     },
     {
       path: '/organizer/dashboard',
       name: 'organizer-dashboard',
-      component: () => import('@/views/HomeView.vue'),
+      component: OrganizerDashboardView,
       meta: { requiresAuth: true, role: 'ORGANIZER' }
     }
-  ]
+  ],
+  scrollBehavior() {
+    return { top: 0 }
+  }
 })
 
-// Route Guard bảo vệ các trang riêng tư
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return next({ name: 'login', query: { redirect: to.fullPath } })
