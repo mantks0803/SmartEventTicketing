@@ -3,4 +3,8 @@
 
 
 ##pagination -> undd
-##hoạt ảnh banner chính!!
+##hoạt ảnh banner chính!!\
+
+
+##hoạt ảnh banner chính -> lướt qua mượt
+##Hồ sơ -- arrow updown for user interact (nhớ kèm sweetarlet nếu cần)
