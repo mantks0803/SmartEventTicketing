@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Customer, Organizer
+from .models import User, Customer, Organizer
 
 User = get_user_model()
 
@@ -77,3 +77,56 @@ class LoginSerializer(serializers.Serializer):
             return attrs
 
         raise serializers.ValidationError('Tên đăng nhập/Email hoặc mật khẩu không chính xác.')
+
+
+class CustomerProfileSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user.id', read_only=True)
+    name = serializers.CharField(source='user.name')
+    phone_number = serializers.CharField(source='user.phone_number', required=False, allow_blank=True, allow_null=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    avatar = serializers.CharField(source='user.avatar', read_only=True)
+    type = serializers.CharField(source='user.type', read_only=True)
+    dob = serializers.DateField(source='user.dob', required=False, allow_null=True)
+
+    class Meta:
+        model = Customer
+        fields = ['id', 'name', 'email', 'username', 'phone_number', 'avatar', 'type', 'dob']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+        for attr, value in user_data.items():
+            setattr(user, attr, value)
+        user.save()
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
+class OrganizerProfileSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user.id', read_only=True)
+    name = serializers.CharField(source='user.name')
+    phone_number = serializers.CharField(source='user.phone_number', required=False, allow_blank=True, allow_null=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    avatar = serializers.CharField(source='user.avatar', read_only=True)
+    type = serializers.CharField(source='user.type', read_only=True)
+
+    class Meta:
+        model = Organizer
+        fields = ['id', 'name', 'email', 'username', 'phone_number', 'avatar', 'type', 'company_name', 'bank_account']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        user = instance.user
+        for attr, value in user_data.items():
+            setattr(user, attr, value)
+        user.save()
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance

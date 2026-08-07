@@ -7,7 +7,7 @@
             <i class="bi bi-person-plus-fill fs-3"></i>
           </div>
           <h3 class="fw-bold">Tạo tài khoản</h3>
-          <p class="text-muted small">Chọn tư cách tham gia hệ thống SmartTicket</p>
+          <p class="text-muted small">Đến với SmartTicket, bạn là: </p>
         </div>
 
         <div class="role-selector mb-4 p-1 bg-light rounded-pill d-flex">
@@ -105,6 +105,17 @@
             <div v-if="errors.phone_number" class="invalid-feedback">{{ errors.phone_number }}</div>
           </div>
 
+          <div v-if="form.role === 'CUSTOMER'" class="mb-3">
+            <label class="form-label fw-semibold small">Ngày sinh <span class="text-muted fs-8">(Tùy chọn)</span></label>
+            <input
+              v-model="form.dob"
+              type="date"
+              class="form-control bg-light"
+              :class="{ 'is-invalid': errors.dob }"
+            />
+            <div v-if="errors.dob" class="invalid-feedback">{{ errors.dob }}</div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label fw-semibold small">Mật khẩu <span class="text-danger">*</span></label>
             <div class="input-group">
@@ -186,6 +197,7 @@ const form = reactive({
   username: '',
   email: '',
   phone_number: '',
+  dob: '',
   company_name: '',
   bank_account: '',
   password: '',
@@ -197,6 +209,7 @@ const errors = reactive({
   username: '',
   email: '',
   phone_number: '',
+  dob: '',
   company_name: '',
   bank_account: '',
   password: '',
@@ -237,6 +250,26 @@ const validateForm = () => {
     isValid = false
   }
 
+  if (form.role === 'CUSTOMER' && form.dob) {
+    const selectedDate = new Date(form.dob)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (selectedDate > today) {
+      errors.dob = 'Ngày sinh không được ở tương lai.'
+      isValid = false
+    } else {
+      const minAgeDate = new Date()
+      minAgeDate.setFullYear(minAgeDate.getFullYear() - 13)
+      minAgeDate.setHours(0, 0, 0, 0)
+
+      if (selectedDate > minAgeDate) {
+        errors.dob = 'Bạn phải từ 13 tuổi trở lên để đăng ký.'
+        isValid = false
+      }
+    }
+  }
+
   if (form.role === 'ORGANIZER') {
     if (!form.company_name.trim()) {
       errors.company_name = 'Vui lòng nhập Tên đơn vị tổ chức.'
@@ -272,6 +305,10 @@ const handleRegister = async () => {
     email: form.email.trim(),
     phone_number: form.phone_number.trim(),
     password: form.password
+  }
+
+  if (form.role === 'CUSTOMER' && form.dob) {
+    payload.dob = form.dob
   }
 
   let result

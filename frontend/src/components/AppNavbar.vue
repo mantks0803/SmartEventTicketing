@@ -53,24 +53,37 @@
               </router-link>
             </li>
 
-            <li class="nav-item dropdown ms-lg-2">
-              <a class="nav-link dropdown-toggle text-white d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
-                <div class="avatar-circle">
-                  <i class="bi bi-person-fill text-white"></i>
-                </div>
+            <li class="nav-item dropdown ms-lg-2 position-relative" ref="dropdownContainerRef">
+              <a 
+                class="nav-link dropdown-toggle text-white d-flex align-items-center gap-2 cursor-pointer" 
+                href="#" 
+                role="button"
+                @click.prevent="toggleDropdown"
+              >
+                <img :src="authStore.user?.avatar || defaultAvatar" class="rounded-circle object-fit-cover" width="32" height="32" />
                 <span class="fw-semibold fs-6">{{ authStore.user?.name || 'Tài khoản' }}</span>
               </a>
-              <ul class="dropdown-menu dropdown-menu-end rounded-xl border-0 shadow-lg py-2">
+
+              <ul 
+                class="dropdown-menu dropdown-menu-end rounded-xl border-0 shadow-lg py-2 position-absolute"
+                :class="{ show: isDropdownOpen }"
+                style="right: 0; top: 100%;"
+              >
+                <li>
+                  <router-link to="/profile" class="dropdown-item py-2 fs-6" @click="isDropdownOpen = false">
+                    <i class="bi bi-person-circle me-2 text-primary"></i>Hồ sơ của tôi
+                  </router-link>
+                </li>
                 <template v-if="authStore.isCustomer">
                   <li>
-                    <router-link to="/my-tickets" class="dropdown-item py-2 fs-6">
+                    <router-link to="/my-tickets" class="dropdown-item py-2 fs-6" @click="isDropdownOpen = false">
                       <i class="bi bi-wallet2 me-2 text-primary"></i>Ví vé của tôi
                     </router-link>
                   </li>
                 </template>
                 <template v-if="authStore.isOrganizer">
                   <li>
-                    <router-link to="/organizer/dashboard" class="dropdown-item py-2 fs-6">
+                    <router-link to="/organizer/dashboard" class="dropdown-item py-2 fs-6" @click="isDropdownOpen = false">
                       <i class="bi bi-speedometer2 me-2 text-primary"></i>Quản lý sự kiện
                     </router-link>
                   </li>
@@ -91,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Swal from 'sweetalert2'
@@ -99,8 +112,30 @@ import Swal from 'sweetalert2'
 const authStore = useAuthStore()
 const router = useRouter()
 const searchQuery = ref('')
+const isDropdownOpen = ref(false)
+const dropdownContainerRef = ref(null)
+const defaultAvatar = 'https://res.cloudinary.com/dmhnfoc9i/image/upload/v1777361181/tickethub_avatars/btsrovtumjgqlaharj2r.jpg'
+
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value
+}
+
+const handleClickOutside = (event) => {
+  if (dropdownContainerRef.value && !dropdownContainerRef.value.contains(event.target)) {
+    isDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 const handleLogout = async () => {
+  isDropdownOpen.value = false
   const result = await Swal.fire({
     title: 'Xác nhận đăng xuất',
     text: 'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?',
@@ -164,29 +199,19 @@ const handleSearch = () => {
 }
 
 .search-box-dark {
-  background-color: #1E293B;
+  background-color: #4875bf;
   border-radius: 9999px;
   padding: 2px 12px;
   border: 1px solid #334155;
 }
 
 .search-input::placeholder {
-  color: #94A3B8;
+  color: #fefefe;
   font-size: 0.9rem;
 }
 
 .search-input:focus {
   box-shadow: none;
-}
-
-.avatar-circle {
-  width: 32px;
-  height: 32px;
-  background-color: #334155;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .text-cyan {
@@ -201,5 +226,9 @@ const handleSearch = () => {
 
 .fw-extrabold {
   font-weight: 800;
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>
