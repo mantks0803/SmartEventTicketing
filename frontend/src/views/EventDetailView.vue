@@ -2,7 +2,6 @@
   <div v-if="loading" class="text-center py-5">
     <div class="spinner-border text-primary"></div>
   </div>
-
   <div v-else-if="event" class="bg-page-custom">
     <div class="position-relative text-white hero-detail">
       <img :src="event.thumbnail" class="w-100 h-100" style="object-fit: cover;" />
@@ -27,11 +26,9 @@
             <p class="lh-lg text-secondary style-pre-line fs-6">{{ event.description }}</p>
           </div>
         </div>
-
         <div class="col-lg-5">
           <div class="bg-white p-4 rounded-xl border shadow-sm sticky-top-custom">
             <h4 class="fw-bold mb-4 text-slate-900">Thông tin loại vé</h4>
-
             <div class="mb-4">
               <div v-for="tt in event.ticket_types" :key="tt.id" class="p-3 mb-2 rounded-xl border bg-light-custom d-flex justify-content-between align-items-center">
                 <div>
@@ -41,7 +38,6 @@
                 <div class="fw-extrabold text-primary-custom fs-5">{{ formatCurrency(tt.price) }}</div>
               </div>
             </div>
-
             <button class="btn btn-cta w-100 rounded-pill py-3 fs-5" @click="fetchSeatsAndOpenModal">
               <i class="bi bi-grid-3x3-gap-fill me-2"></i>Mở sơ đồ chọn ghế
             </button>
@@ -51,42 +47,25 @@
     </div>
 
     <div class="modal fade" id="seatModal" tabindex="-1" ref="seatModalRef">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content rounded-xl border-0 shadow-lg">
-          <div class="modal-header border-0 bg-dark-slate text-white rounded-top-xl">
+          <div class="modal-header border-0 bg-dark-slate text-white rounded-top-xl p-3 px-4">
             <h5 class="modal-title fw-bold">Sơ đồ chọn ghế</h5>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
           </div>
-          <div class="modal-body p-4 text-center">
-            <div class="bg-dark text-white rounded-pill py-1.5 mb-4 mx-auto w-50 fs-6 fw-bold tracking-wide">SÂN KHẤU</div>
-
-            <div class="d-flex justify-content-center flex-wrap gap-3 mb-4 fs-6">
-              <span class="d-flex align-items-center gap-1.5"><span class="seat-btn seat-available" style="width:20px;height:20px;"></span>Còn trống</span>
-              <span class="d-flex align-items-center gap-1.5"><span class="seat-btn seat-selected" style="width:20px;height:20px;"></span>Đang chọn</span>
-              <span class="d-flex align-items-center gap-1.5"><span class="seat-btn seat-locked" style="width:20px;height:20px;"></span>Đang giữ</span>
-              <span class="d-flex align-items-center gap-1.5"><span class="seat-btn seat-sold" style="width:20px;height:20px;"></span>Đã bán</span>
-            </div>
-
-            <div class="d-flex flex-wrap justify-content-center gap-2 overflow-auto p-2" style="max-height: 320px;">
-              <button 
-                v-for="seat in seats" 
-                :key="seat.id" 
-                class="seat-btn"
-                :class="getSeatClass(seat)"
-                :disabled="seat.status === 'SOLD' || seat.status === 'LOCKED'"
-                @click="toggleSelectSeat(seat.id)"
-              >
-                <i v-if="selectedSeatIds.includes(seat.id)" class="bi bi-check-lg me-0.5"></i>
-                {{ seat.seat_name || (seat.row + seat.number) }}
-              </button>
-            </div>
+          <div class="modal-body p-4">
+            <SeatMap
+              :seats="seats"
+              :selected-seat-ids="selectedSeatIds"
+              @toggle-select-seat="toggleSelectSeat"
+            />
           </div>
-          <div class="modal-footer border-0 d-flex justify-content-between align-items-center bg-light-custom rounded-bottom-xl p-3">
+          <div class="modal-footer border-0 d-flex justify-content-between align-items-center bg-light-custom rounded-bottom-xl p-3 px-4">
             <div>
-              <span class="text-muted">Đã chọn: </span>
-              <span class="fw-bold text-primary-custom fs-5">{{ selectedSeatIds.length }} ghế</span>
+              <span class="text-muted d-block small">Đã chọn: <strong class="text-slate-900 fs-6">{{ selectedSeatIds.length }} ghế</strong></span>
+              <span class="fw-extrabold text-primary-custom fs-4">{{ formatCurrency(selectedSeatsTotal) }}</span>
             </div>
-            <button class="btn btn-cta rounded-pill px-4 py-2" :disabled="selectedSeatIds.length === 0" @click="proceedHoldSeats">
+            <button class="btn btn-cta rounded-pill px-4 py-2.5 fw-bold" :disabled="selectedSeatIds.length === 0" @click="proceedHoldSeats">
               Giữ ghế ngay
             </button>
           </div>
@@ -97,11 +76,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/services/api'
 import { Modal } from 'bootstrap'
 import Swal from 'sweetalert2'
+import SeatMap from '@/components/SeatMap.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -110,15 +90,11 @@ const seats = ref([])
 const loading = ref(true)
 const selectedSeatIds = ref([])
 const seatModalRef = ref(null)
-let bsSeatModal = null
 
 onMounted(async () => {
   try {
     const res = await apiClient.get(`events/${route.params.id}/`)
     event.value = res.data
-    if (seatModalRef.value) {
-      bsSeatModal = new Modal(seatModalRef.value)
-    }
   } catch (err) {
     console.error(err)
   } finally {
@@ -126,12 +102,23 @@ onMounted(async () => {
   }
 })
 
+const selectedSeatsTotal = computed(() => {
+  if (!selectedSeatIds.value || selectedSeatIds.value.length === 0 || !seats.value) return 0
+  return seats.value
+    .filter(s => selectedSeatIds.value.includes(s.id))
+    .reduce((sum, s) => sum + parseFloat(s.price || 0), 0)
+})
+
 const fetchSeatsAndOpenModal = async () => {
   try {
     const res = await apiClient.get(`seats/event/${event.value.id}/`)
     seats.value = res.data
     selectedSeatIds.value = []
-    bsSeatModal?.show()
+    
+    if (seatModalRef.value) {
+      const modalInstance = Modal.getOrCreateInstance(seatModalRef.value)
+      modalInstance.show()
+    }
   } catch (err) {
     Swal.fire({
       title: 'Lỗi sơ đồ ghế',
@@ -152,13 +139,6 @@ const toggleSelectSeat = (seatId) => {
   }
 }
 
-const getSeatClass = (seat) => {
-  if (selectedSeatIds.value.includes(seat.id)) return 'seat-selected'
-  if (seat.status === 'LOCKED') return 'seat-locked'
-  if (seat.status === 'SOLD') return 'seat-sold'
-  return 'seat-available'
-}
-
 const proceedHoldSeats = async () => {
   if (selectedSeatIds.value.length === 0) {
     Swal.fire({
@@ -170,10 +150,13 @@ const proceedHoldSeats = async () => {
     })
     return
   }
-
   try {
     const res = await apiClient.post('orders/hold/', { seat_ids: selectedSeatIds.value })
-    bsSeatModal?.hide()
+    
+    if (seatModalRef.value) {
+      const modalInstance = Modal.getInstance(seatModalRef.value)
+      modalInstance?.hide()
+    }
     
     Swal.fire({
       toast: true,
@@ -183,7 +166,6 @@ const proceedHoldSeats = async () => {
       showConfirmButton: false,
       timer: 2000
     })
-
     router.push(`/checkout/${res.data.id}`)
   } catch (err) {
     Swal.fire({
@@ -196,7 +178,7 @@ const proceedHoldSeats = async () => {
   }
 }
 
-const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
+const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0)
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 </script>
 
@@ -223,5 +205,9 @@ const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('vi-VN', { 
 
 .fw-extrabold {
   font-weight: 800;
+}
+
+.text-slate-900 {
+  color: #0F172A;
 }
 </style>

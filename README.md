@@ -9,13 +9,13 @@
 
 
 
-\##hoạt ảnh banner chính -> lướt qua mượt
+\##hoạt ảnh banner chính -> smooth transaction
 ##Hồ sơ -- arrow updown for user interact (nhớ kèm sweetarlet nếu cần)
 \##update avatar - cloudinary
 
-##tạo lại seed data tên event ? -> giống nhau toàn bộ ?
+##!!!!tạo lại seed data tên event ? -> giống nhau toàn bộ ?
 
 
-#dob missing in register 
 
+##user threads -> payment -> mail sending ?
 
