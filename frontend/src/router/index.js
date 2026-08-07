@@ -51,6 +51,12 @@ const router = createRouter({
       name: 'organizer-dashboard',
       component: OrganizerDashboardView,
       meta: { requiresAuth: true, role: 'ORGANIZER' }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: () => import('@/views/ProfileView.vue'),
+      meta: { requiresAuth: true }
     }
   ],
   scrollBehavior() {
@@ -58,25 +64,19 @@ const router = createRouter({
   }
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return next({ name: 'login', query: { redirect: to.fullPath } })
+    return { name: 'login', query: { redirect: to.fullPath } }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     if (authStore.isOrganizer) {
-      return next({ name: 'organizer-dashboard' })
+      return { name: 'organizer-dashboard' }
     }
-    return next({ name: 'home' })
+    return { name: 'home' }
   }
-
-  if (to.meta.role && authStore.userRole !== to.meta.role) {
-    return next({ name: 'home' })
-  }
-
-  next()
 })
 
 export default router

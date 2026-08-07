@@ -10,9 +10,9 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAuthenticated: (state) => !!state.accessToken,
-    isCustomer: (state) => state.user?.role === 'CUSTOMER',
-    isOrganizer: (state) => state.user?.role === 'ORGANIZER',
-    userRole: (state) => state.user?.role || null
+    isCustomer: (state) => state.user?.role === 'CUSTOMER' || state.user?.type === 'CUSTOMER',
+    isOrganizer: (state) => state.user?.role === 'ORGANIZER' || state.user?.type === 'ORGANIZER',
+    userRole: (state) => state.user?.role || state.user?.type || null
   },
 
   actions: {
@@ -89,6 +89,11 @@ export const useAuthStore = defineStore('auth', {
           message: message || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.'
         }
       }
+    },
+
+    updateUser(userData) {
+      this.user = { ...this.user, ...userData }
+      localStorage.setItem('user_info', JSON.stringify(this.user))
     },
 
     logout() {
