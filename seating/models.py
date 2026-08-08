@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from events.models import Event, TicketType
 
 class SeatStatusEnum(models.TextChoices):
@@ -14,9 +15,28 @@ class Seat(models.Model):
     seat_name = models.CharField(max_length=50, blank=True)
     status = models.CharField(max_length=20, choices=SeatStatusEnum.choices, default=SeatStatusEnum.AVAILABLE)
     locked_until = models.DateTimeField(null=True, blank=True)
+    locked_by_order = models.ForeignKey(
+        'orders.Order',
+        on_delete=models.SET_NULL,
+        related_name='locked_seats',
+        null=True,
+        blank=True
+    )
 
     class Meta:
         unique_together = ('event', 'row', 'number')
+        indexes = [
+            models.Index(fields=['event', 'status']),
+            models.Index(fields=['status', 'locked_until']),
+        ]
+
+    @property
+    def is_lock_expired(self):
+        return bool(
+            self.status == SeatStatusEnum.LOCKED
+            and self.locked_until
+            and self.locked_until <= timezone.now()
+        )
 
     def save(self, *args, **kwargs):
         if not self.seat_name:

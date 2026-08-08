@@ -1,30 +1,64 @@
-import uuid
-from datetime import timedelta
-from django.utils import timezone
+from decimal import Decimal, InvalidOperation
+
 from django.conf import settings
 from django.db import transaction
-from rest_framework.views import APIView
+from django.utils import timezone
+from rest_framework import generics, permissions, status
 from rest_framework.response import Response
-from rest_framework import status, permissions, generics
+from rest_framework.views import APIView
 
-from orders.models import Order, OrderStatusEnum, Ticket
-from orders.serializers import (
-    OrderSerializer, CustomerTicketSerializer, 
-    HoldSeatsInputSerializer, CheckInInputSerializer
-)
-from seating.models import Seat, SeatStatusEnum
 from authentication.permissions import IsCustomerPermission, IsOrganizerPermission
-from .utils import send_payment_success_email
+from orders.models import (
+    Order,
+    OrderStatusEnum,
+    Payment,
+    PaymentStatusEnum,
+    Ticket,
+)
+from orders.serializers import (
+    CheckInInputSerializer,
+    CustomerTicketSerializer,
+    HoldSeatsInputSerializer,
+    OrderSerializer,
+)
+from orders.services import (
+    OrderLifecycleError,
+    cancel_pending_order,
+    confirm_order_payment,
+    expire_order,
+    hold_seats,
+)
+from orders.utils import send_payment_success_email
+
 
 try:
-    from payos import PayOS, ItemData, PaymentData
-    payos = PayOS(
-        client_id=getattr(settings, 'PAYOS_CLIENT_ID', ''),
-        api_key=getattr(settings, 'PAYOS_API_KEY', ''),
-        checksum_key=getattr(settings, 'PAYOS_CHECKSUM_KEY', '')
+    from payos import ItemData, PayOS, PaymentData
+
+    payos_credentials = (
+        getattr(settings, 'PAYOS_CLIENT_ID', ''),
+        getattr(settings, 'PAYOS_API_KEY', ''),
+        getattr(settings, 'PAYOS_CHECKSUM_KEY', ''),
     )
+    payos = PayOS(
+        client_id=payos_credentials[0],
+        api_key=payos_credentials[1],
+        checksum_key=payos_credentials[2],
+    ) if all(payos_credentials) else None
 except ImportError:
+    ItemData = None
+    PaymentData = None
     payos = None
+
+
+def _get_webhook_value(data, *keys):
+    for key in keys:
+        if isinstance(data, dict) and data.get(key) is not None:
+            return data.get(key)
+        if hasattr(data, key):
+            value = getattr(data, key)
+            if value is not None:
+                return value
+    return None
 
 
 class HoldSeatsView(APIView):
@@ -35,54 +69,25 @@ class HoldSeatsView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        seat_ids = serializer.validated_data['seat_ids']
         customer = getattr(request.user, 'customer', None)
         if not customer:
-            return Response({'error': 'Tài khoản không phải là khách hàng.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        now = timezone.now()
-        lock_duration = timedelta(minutes=10)
+            return Response(
+                {'error': 'Tài khoản không phải là khách hàng.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            with transaction.atomic():
-                seats = Seat.objects.select_for_update().filter(id__in=seat_ids)
-                if seats.count() != len(seat_ids):
-                    return Response({'error': 'Một số ghế chọn không tồn tại.'}, status=status.HTTP_400_BAD_REQUEST)
-
-                for seat in seats:
-                    if seat.status == SeatStatusEnum.SOLD:
-                        return Response({'error': f'Ghế {seat.seat_name} đã được bán.'}, status=status.HTTP_400_BAD_REQUEST)
-                    if seat.status == SeatStatusEnum.LOCKED and seat.locked_until and seat.locked_until > now:
-                        return Response({'error': f'Ghế {seat.seat_name} đang được người khác giữ.'}, status=status.HTTP_400_BAD_REQUEST)
-
-                event = seats.first().event
-                total_amount = sum(s.ticket_type.price for s in seats)
-
-                order = Order.objects.create(
-                    customer=customer,
-                    event=event,
-                    total_amount=total_amount,
-                    status=OrderStatusEnum.PENDING
-                )
-
-                seats.update(status=SeatStatusEnum.LOCKED, locked_until=now + lock_duration)
-
-                tickets_to_create = []
-                for seat in seats:
-                    tickets_to_create.append(
-                        Ticket(
-                            order=order,
-                            seat=seat,
-                            ticket_type=seat.ticket_type,
-                            qr_code=f"TK-{order.id}-{seat.id}-{uuid.uuid4().hex[:8].upper()}"
-                        )
-                    )
-                Ticket.objects.bulk_create(tickets_to_create)
-
+            order = hold_seats(customer, serializer.validated_data['seat_ids'])
+            order = Order.objects.prefetch_related(
+                'items__seat__ticket_type',
+                'tickets__seat__ticket_type',
+            ).get(id=order.id)
             return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
-
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except OrderLifecycleError as exc:
+            return Response(
+                {'error': exc.message, 'code': exc.code},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class CustomerOrderListView(generics.ListAPIView):
@@ -93,7 +98,15 @@ class CustomerOrderListView(generics.ListAPIView):
         customer = getattr(self.request.user, 'customer', None)
         if not customer:
             return Order.objects.none()
-        return Order.objects.filter(customer=customer).order_by('-created_at')
+        return (
+            Order.objects.filter(customer=customer)
+            .select_related('event')
+            .prefetch_related(
+                'items__seat__ticket_type',
+                'tickets__seat__ticket_type',
+            )
+            .order_by('-created_at')
+        )
 
 
 class OrderDetailView(generics.RetrieveAPIView):
@@ -104,7 +117,14 @@ class OrderDetailView(generics.RetrieveAPIView):
         customer = getattr(self.request.user, 'customer', None)
         if not customer:
             return Order.objects.none()
-        return Order.objects.filter(customer=customer)
+        return (
+            Order.objects.filter(customer=customer)
+            .select_related('event')
+            .prefetch_related(
+                'items__seat__ticket_type',
+                'tickets__seat__ticket_type',
+            )
+        )
 
 
 class CancelOrderView(APIView):
@@ -113,24 +133,34 @@ class CancelOrderView(APIView):
     def post(self, request, pk):
         customer = getattr(request.user, 'customer', None)
         if not customer:
-            return Response({'error': 'Tài khoản không phải là khách hàng.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Tài khoản không phải là khách hàng.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            with transaction.atomic():
-                order = Order.objects.select_for_update().get(id=pk, customer=customer)
-                if order.status != OrderStatusEnum.PENDING:
-                    return Response({'error': 'Chỉ có thể hủy đơn hàng đang chờ thanh toán.'}, status=status.HTTP_400_BAD_REQUEST)
+            order = cancel_pending_order(pk, customer=customer)
+        except OrderLifecycleError as exc:
+            response_status = (
+                status.HTTP_404_NOT_FOUND
+                if exc.code == 'order_not_found'
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response(
+                {'error': exc.message, 'code': exc.code},
+                status=response_status,
+            )
 
-                order.status = OrderStatusEnum.CANCELLED
-                order.save()
+        if order.status == OrderStatusEnum.EXPIRED:
+            return Response(
+                {'error': 'Đơn hàng đã hết thời gian giữ ghế.', 'code': 'order_expired'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-                tickets = Ticket.objects.filter(order=order)
-                seat_ids = tickets.values_list('seat_id', flat=True)
-                Seat.objects.filter(id__in=seat_ids).update(status=SeatStatusEnum.AVAILABLE, locked_until=None)
-
-            return Response({'message': 'Đã hủy đơn hàng thành công.'}, status=status.HTTP_200_OK)
-        except Order.DoesNotExist:
-            return Response({'error': 'Không tìm thấy đơn hàng hoặc bạn không có quyền hủy đơn này.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {'message': 'Đã hủy đơn hàng thành công.'},
+            status=status.HTTP_200_OK,
+        )
 
 
 class CreatePayOSPaymentView(APIView):
@@ -138,35 +168,57 @@ class CreatePayOSPaymentView(APIView):
 
     def post(self, request, order_id):
         customer = getattr(request.user, 'customer', None)
+
         try:
             order = Order.objects.get(id=order_id, customer=customer)
-            if order.status != OrderStatusEnum.PENDING:
-                return Response({'error': 'Đơn hàng không ở trạng thái chờ thanh toán.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Order.DoesNotExist:
+            return Response(
+                {'error': 'Không tìm thấy đơn hàng.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
-            if getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False) or not payos:
+        if order.is_expired:
+            expire_order(order.id)
+            return Response(
+                {'error': 'Đơn hàng đã hết thời gian giữ ghế.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.status != OrderStatusEnum.PENDING:
+            return Response(
+                {'error': 'Đơn hàng không ở trạng thái chờ thanh toán.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            if getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False):
                 checkout_url = f"{settings.FRONTEND_URL}/payment-mock/{order.id}"
+            elif not payos:
+                return Response(
+                    {'error': 'PayOS chưa được cấu hình đầy đủ trên server.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             else:
-                # Tạo link thanh toán PayOS thật
                 domain = settings.FRONTEND_URL
                 payment_data = PaymentData(
                     orderCode=order.id,
                     amount=int(order.total_amount),
                     description=f"Thanh toan don #{order.id}"[:25],
                     items=[],
-                    cancelUrl=f"{domain}/my-orders",
-                    returnUrl=f"{domain}/my-tickets"
+                    cancelUrl=f"{domain}/",
+                    returnUrl=f"{domain}/my-tickets",
                 )
                 payos_response = payos.createPaymentLink(payment_data)
                 checkout_url = payos_response.checkoutUrl
 
             order.payos_checkout_url = checkout_url
-            order.save()
-
+            order.save(update_fields=['payos_checkout_url', 'updated_at'])
             return Response({'checkoutUrl': checkout_url}, status=status.HTTP_200_OK)
-        except Order.DoesNotExist:
-            return Response({'error': 'Không tìm thấy đơn hàng.'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': f'Lỗi cổng thanh toán: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as exc:
+            return Response(
+                {'error': f'Lỗi cổng thanh toán: {str(exc)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class CustomerTicketListView(generics.ListAPIView):
@@ -177,7 +229,14 @@ class CustomerTicketListView(generics.ListAPIView):
         customer = getattr(self.request.user, 'customer', None)
         if not customer:
             return Ticket.objects.none()
-        return Ticket.objects.filter(order__customer=customer, order__status=OrderStatusEnum.PAID).order_by('-id')
+        return (
+            Ticket.objects.filter(
+                order__customer=customer,
+                order__status=OrderStatusEnum.PAID,
+            )
+            .select_related('order', 'seat__event', 'ticket_type')
+            .order_by('-id')
+        )
 
 
 class CheckInView(APIView):
@@ -188,25 +247,52 @@ class CheckInView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        qr_code = serializer.validated_data['qr_code']
         organizer = getattr(request.user, 'organizer', None)
         if not organizer:
-            return Response({'error': 'Tài khoản không phải Ban tổ chức.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'error': 'Tài khoản không phải Ban tổ chức.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         try:
-            ticket = Ticket.objects.select_related('seat__event__organizer').get(qr_code=qr_code)
-            
-            if ticket.seat.event.organizer != organizer:
-                return Response({'error': 'Bạn không có quyền soát vé cho sự kiện của Ban tổ chức khác!'}, status=status.HTTP_403_FORBIDDEN)
+            with transaction.atomic():
+                ticket = (
+                    Ticket.objects.select_for_update()
+                    .select_related('order', 'seat__event__organizer')
+                    .get(qr_code=serializer.validated_data['qr_code'])
+                )
 
-            if ticket.is_checked_in:
-                return Response({'error': 'Vé này đã được soát vé trước đó!'}, status=status.HTTP_400_BAD_REQUEST)
+                if ticket.order.status != OrderStatusEnum.PAID:
+                    return Response(
+                        {'error': 'Vé chưa được thanh toán hoặc không còn hiệu lực.'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
-            ticket.is_checked_in = True
-            ticket.save()
-            return Response({'message': f'Soát vé thành công cho ghế {ticket.seat.row}{ticket.seat.number}!'}, status=status.HTTP_200_OK)
+                if ticket.seat.event.organizer != organizer:
+                    return Response(
+                        {'error': 'Bạn không có quyền soát vé cho sự kiện của Ban tổ chức khác!'},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                if ticket.is_checked_in:
+                    return Response(
+                        {'error': 'Vé này đã được soát vé trước đó!'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                ticket.is_checked_in = True
+                ticket.checked_in_at = timezone.now()
+                ticket.save(update_fields=['is_checked_in', 'checked_in_at'])
+
+            return Response(
+                {'message': f'Soát vé thành công cho ghế {ticket.seat.seat_name}!'},
+                status=status.HTTP_200_OK,
+            )
         except Ticket.DoesNotExist:
-            return Response({'error': 'Mã vé QR không hợp lệ hoặc không tồn tại.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'Mã vé QR không hợp lệ hoặc không tồn tại.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
 
 class PayOSWebhookView(APIView):
@@ -215,50 +301,109 @@ class PayOSWebhookView(APIView):
     def post(self, request):
         payload = request.data
 
-        if not getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False) and payos:
+        if getattr(settings, 'PAYOS_SKIP_SIGNATURE_CHECK', False):
+            verified_data = payload.get('data', {})
+        else:
+            if not payos:
+                return Response(
+                    {'error': 'PayOS chưa được cấu hình đầy đủ trên server.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             try:
                 verified_data = payos.verifyPaymentWebhookData(payload)
-                data = verified_data.to_dict() if hasattr(verified_data, 'to_dict') else payload.get('data', {})
-            except Exception as e:
-                return Response({'error': f'Chữ ký Webhook không hợp lệ: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            data = payload.get('data', {})
+            except Exception as exc:
+                return Response(
+                    {'error': f'Chữ ký Webhook không hợp lệ: {str(exc)}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        order_id = data.get('orderCode')
-        success = payload.get('success', False) or payload.get('code') == '00'
+        order_id = _get_webhook_value(verified_data, 'orderCode', 'order_code')
+        amount = _get_webhook_value(verified_data, 'amount')
+        transaction_id = _get_webhook_value(
+            verified_data,
+            'reference',
+            'transactionId',
+            'transaction_id',
+        )
+        success = payload.get('success') is True and str(payload.get('code')) == '00'
 
         if not order_id:
-            return Response({'error': 'Thiếu orderCode trong payload'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Thiếu orderCode trong payload.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
-            with transaction.atomic():
-                order = Order.objects.select_for_update().get(id=order_id)
-
-                if order.status == OrderStatusEnum.PAID:
-                    return Response({'status': 'already_processed'}, status=status.HTTP_200_OK)
-
-                tickets = Ticket.objects.filter(order=order)
-
-                if success:
-                    order.status = OrderStatusEnum.PAID
-                    order.save()
-
-                    seat_ids = tickets.values_list('seat_id', flat=True)
-                    if order.event:
-                        order.event.seats.filter(id__in=seat_ids).update(status=SeatStatusEnum.SOLD, locked_until=None)
-
-                    transaction.on_commit(lambda: send_payment_success_email(order))
-                else:
-                    order.status = OrderStatusEnum.CANCELLED
-                    order.save()
-
-                    seat_ids = tickets.values_list('seat_id', flat=True)
-                    if order.event:
-                        order.event.seats.filter(id__in=seat_ids).update(status=SeatStatusEnum.AVAILABLE, locked_until=None)
-
-            return Response({'status': 'success'}, status=status.HTTP_200_OK)
-
+            order = Order.objects.get(id=order_id)
         except Order.DoesNotExist:
-            return Response({'error': 'Không tìm thấy đơn hàng'}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': 'Không tìm thấy đơn hàng.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not success:
+            if order.status != OrderStatusEnum.PENDING:
+                return Response(
+                    {'status': 'already_processed', 'order_status': order.status},
+                    status=status.HTTP_200_OK,
+                )
+
+            try:
+                cancelled_order = cancel_pending_order(order.id)
+            except OrderLifecycleError:
+                cancelled_order = order
+
+            payment_amount = order.total_amount
+            if amount is not None:
+                try:
+                    payment_amount = Decimal(str(amount))
+                except InvalidOperation:
+                    payment_amount = order.total_amount
+
+            payment_defaults = {
+                'order': cancelled_order,
+                'provider': 'PAYOS',
+                'amount': payment_amount,
+                'status': PaymentStatusEnum.FAILED,
+            }
+            if transaction_id:
+                Payment.objects.get_or_create(
+                    transaction_id=str(transaction_id),
+                    defaults=payment_defaults,
+                )
+            else:
+                Payment.objects.create(**payment_defaults)
+
+            return Response({'status': 'payment_failed'}, status=status.HTTP_200_OK)
+
+        if amount is None:
+            return Response(
+                {'error': 'Thiếu số tiền thanh toán trong webhook.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            paid_order, processed = confirm_order_payment(
+                order.id,
+                amount=amount,
+                transaction_id=transaction_id,
+            )
+        except OrderLifecycleError as exc:
+            if exc.code in {'invalid_payment_state', 'order_expired'}:
+                return Response(
+                    {'status': 'ignored', 'code': exc.code},
+                    status=status.HTTP_200_OK,
+                )
+            return Response(
+                {'error': exc.message, 'code': exc.code},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if paid_order.status == OrderStatusEnum.EXPIRED:
+            return Response({'status': 'ignored_expired'}, status=status.HTTP_200_OK)
+
+        if not processed:
+            return Response({'status': 'already_processed'}, status=status.HTTP_200_OK)
+
+        transaction.on_commit(lambda: send_payment_success_email(paid_order))
+        return Response({'status': 'success'}, status=status.HTTP_200_OK)

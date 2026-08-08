@@ -7,4 +7,7 @@ class SeatSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Seat
-        fields = ['id', 'row', 'number', 'seat_name', 'status', 'ticket_type', 'ticket_type_name', 'price']
+        fields = [
+            'id', 'row', 'number', 'seat_name', 'status', 'locked_until',
+            'ticket_type', 'ticket_type_name', 'price'
+        ]
