@@ -15,8 +15,8 @@
               <div class="flex-grow-1">
                 <h5 class="fw-bold mb-2 text-slate-900">Chi tiết ghế chọn</h5>
                 <div class="d-flex flex-wrap gap-2 mb-3">
-                  <span v-for="t in order.tickets" :key="t.id" class="badge bg-primary-custom fs-6 px-3 py-2 rounded-pill shadow-sm">
-                    Ghế {{ t.seat_details?.seat_name || t.seat }} ({{ t.ticket_type_name }})
+                  <span v-for="item in order.items" :key="item.id" class="badge bg-primary-custom fs-6 px-3 py-2 rounded-pill shadow-sm">
+                    Ghế {{ item.seat_details?.seat_name || item.seat }} ({{ item.ticket_type_name }})
                   </span>
                 </div>
               </div>
@@ -37,7 +37,7 @@
               </label>
             </div>
 
-            <button class="btn btn-cta w-100 rounded-pill py-3 fs-5" :disabled="loading" @click="handlePayOS">
+            <button class="btn btn-cta w-100 rounded-pill py-3 fs-5" :disabled="loading || timeLeft <= 0 || order.status !== 'PENDING'" @click="handlePayOS">
               {{ loading ? 'Đang khởi tạo giao dịch...' : 'Thanh toán qua PayOS' }}
             </button>
           </div>
@@ -57,7 +57,7 @@ const route = useRoute()
 const router = useRouter()
 const order = ref(null)
 const loading = ref(false)
-const timeLeft = ref(600)
+const timeLeft = ref(0)
 const timerDisplay = ref('10:00')
 let timerInterval = null
 
@@ -65,6 +65,19 @@ onMounted(async () => {
   try {
     const res = await apiClient.get(`orders/${route.params.orderId}/`)
     order.value = res.data
+
+    if (order.value.status !== 'PENDING') {
+      await Swal.fire({
+        title: 'Đơn hàng không thể thanh toán',
+        text: `Trạng thái hiện tại của đơn là ${order.value.status}.`,
+        icon: 'info',
+        confirmButtonColor: '#2563EB',
+        customClass: { popup: 'rounded-4' }
+      })
+      router.push('/')
+      return
+    }
+
     startTimer()
   } catch (err) {
     Swal.fire({
@@ -84,26 +97,51 @@ onUnmounted(() => {
 })
 
 const startTimer = () => {
+  const expiresAt = new Date(order.value.expires_at).getTime()
+  timeLeft.value = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
+  updateTimerDisplay()
+
+  if (timeLeft.value <= 0) {
+    handleExpiredOrder()
+    return
+  }
+
   timerInterval = setInterval(() => {
     if (timeLeft.value <= 0) {
       clearInterval(timerInterval)
-      Swal.fire({
-        title: 'Hết thời gian giữ ghế',
-        text: 'Đã hết thời gian 10 phút thanh toán. Ghế của bạn đã được trả về vị trí trống.',
-        icon: 'warning',
-        confirmButtonText: 'Chọn lại ghế',
-        confirmButtonColor: '#2563EB',
-        customClass: { popup: 'rounded-4' }
-      }).then(() => {
-        router.push('/')
-      })
+      handleExpiredOrder()
     } else {
       timeLeft.value--
-      const m = Math.floor(timeLeft.value / 60)
-      const s = timeLeft.value % 60
-      timerDisplay.value = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+      updateTimerDisplay()
     }
   }, 1000)
+}
+
+const updateTimerDisplay = () => {
+  const m = Math.floor(timeLeft.value / 60)
+  const s = timeLeft.value % 60
+  timerDisplay.value = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+const handleExpiredOrder = async () => {
+  timeLeft.value = 0
+  updateTimerDisplay()
+
+  try {
+    await apiClient.post(`orders/${order.value.id}/cancel/`)
+  } catch (err) {
+    console.info('Đơn hàng đã được backend xử lý hết hạn.', err.response?.data)
+  }
+
+  await Swal.fire({
+    title: 'Hết thời gian giữ ghế',
+    text: 'Đơn hàng đã hết hạn và ghế được trả về trạng thái trống.',
+    icon: 'warning',
+    confirmButtonText: 'Chọn lại ghế',
+    confirmButtonColor: '#2563EB',
+    customClass: { popup: 'rounded-4' }
+  })
+  router.push('/')
 }
 
 const handlePayOS = async () => {
