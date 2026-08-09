@@ -8,6 +8,7 @@ import EventDetailView from '@/views/EventDetailView.vue'
 import CheckoutView from '@/views/CheckoutView.vue'
 import MyTicketsView from '@/views/MyTicketsView.vue'
 import OrganizerDashboardView from '@/views/OrganizerDashboardView.vue'
+import OrganizerEventCreateView from '@/views/OrganizerEventCreateView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,6 +69,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/organizer/events/create',
+      name: 'organizer-event-create',
+      component: OrganizerEventCreateView,
+      meta: {
+        requiresAuth: true,
+        role: 'ORGANIZER'
+      }
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/ProfileView.vue'),
@@ -92,6 +102,18 @@ router.beforeEach((to) => {
         redirect: to.fullPath
       }
     }
+  }
+
+  if (
+    to.meta.role
+    && authStore.isAuthenticated
+    && authStore.userRole !== to.meta.role
+  ) {
+    if (authStore.isOrganizer) {
+      return { name: 'organizer-dashboard' }
+    }
+
+    return { name: 'home' }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
