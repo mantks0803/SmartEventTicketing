@@ -1,0 +1,293 @@
+1. Những phần hiện đã tương đối ổn
+Không cần sửa lớn lại các phần này:
+Giữ ghế bằng transaction và select_for_update().
+Giới hạn tối đa 5 ghế.
+Không cho một đơn chứa ghế của nhiều sự kiện.
+Hủy/hết hạn thì trả ghế.
+Chỉ tạo Ticket khi Order chuyển thành PAID.
+Kiểm tra số tiền webhook.
+Lưu transaction ID.
+Chống webhook lặp cơ bản.
+Không cho webhook thanh toán lại đơn đã hủy.
+Check-in chỉ với đơn PAID.
+Không check-in hai lần.
+Organizer chỉ check-in vé thuộc sự kiện của mình.
+Countdown frontend tính theo expires_at.
+Có 11 test nghiệp vụ Order hiện tại.
+Các phần này chỉ cần bổ sung test và trường hợp biên, không cần refactor nguyên khối.
+A. Các lỗi nên sửa trước
+2. Sửa permission sự kiện
+Đây nên là việc tiếp theo.
+Cần bảo đảm:
+Chỉ ORGANIZER được tạo sự kiện.
+Customer gọi API tạo sự kiện phải nhận 403, không phải lỗi 500.
+Chỉ Organizer mới gọi được API danh sách sự kiện của BTC.
+Organizer A không được sửa/xóa sự kiện của Organizer B.
+Public chỉ xem được sự kiện PUBLISHED.
+Sự kiện PENDING và CANCELLED không được lộ qua API chi tiết công khai.
+Admin vẫn có thể quản lý toàn bộ sự kiện.
+Nên dùng chung IsOrganizerPermission đang có, không cần tạo hệ thống permission phức tạp.
+3. Sửa trạng thái khóa tài khoản
+Hiện có hai field:
+status
+is_active
+Nên chọn một nguồn duy nhất. Cách đơn giản nhất với Django:
+Dùng is_active làm trạng thái chính.
+Django Admin hiển thị và cập nhật is_active.
+Login từ chối user có is_active=False.
+JWT cũ của tài khoản bị khóa cũng phải bị từ chối khi gọi API.
+Không tiếp tục dùng status cho logic đăng nhập.
+Nếu chưa muốn xóa status vì sợ migration ảnh hưởng dữ liệu, có thể tạm đồng bộ status với is_active, sau này mới bỏ field.
+4. Sửa transaction khi tạo sự kiện
+Toàn bộ quá trình sau phải chạy trong một transaction:
+Tạo Event
+→ Tạo TicketType
+→ Tạo Seat
+Nếu tạo ghế lỗi thì Event và TicketType cũng rollback, không để dữ liệu dở dang.
+Cần bổ sung validation:
+start_time phải ở tương lai.
+Phải có ít nhất một loại vé.
+Giá vé không âm.
+Số hàng và số ghế phải hợp lệ.
+Không trùng tên loại vé trong cùng sự kiện.
+row_prefix của các loại vé không được tạo ra tên hàng trùng nhau.
+Giới hạn số ghế để tránh request tạo hàng trăm nghìn ghế.
+Không cần thay đổi model lớn; chủ yếu thêm validation và transaction.atomic().
+5. Hoàn thiện thanh toán đến trễ
+Luồng chính PayOS đã chạy, nhưng còn trường hợp:
+Order hết hạn
+→ khách vẫn chuyển khoản
+→ PayOS gửi webhook thành công
+Không được bán lại ghế vì có thể ghế đã được người khác giữ. Nhưng cũng không nên chỉ trả ignored_expired rồi bỏ dữ liệu.
+Cần:
+Lưu một Payment hoặc bản ghi đối soát.
+Đánh dấu giao dịch cần xử lý thủ công/hoàn tiền.
+Lưu transaction_id, số tiền và Order.
+Trả 200 cho PayOS để tránh webhook gửi lặp liên tục.
+Cho Admin xem danh sách giao dịch cần xử lý.
+Với đồ án, chưa cần tự động hoàn tiền. Chỉ cần lưu và đánh dấu “cần xử lý” là đủ hợp lý.
+B. Hoàn thiện trải nghiệm khách hàng
+6. Làm trang kết quả thanh toán
+Nên bổ sung ba trang hoặc một trang dùng query parameter:
+Thanh toán thành công.
+Thanh toán bị hủy.
+Thanh toán thất bại/đang xử lý.
+Luồng phù hợp:
+PayOS returnUrl
+→ trang kết quả thanh toán
+→ frontend gọi API lấy trạng thái Order
+→ hiển thị PAID/PENDING/EXPIRED
+Không nên tin hoàn toàn dữ liệu query trên returnUrl. Trạng thái cuối cùng vẫn phải lấy từ backend vì webhook mới là nguồn xác nhận.
+Cũng cần:
+Route /payment-mock/:id nếu còn dùng chế độ mock.
+Nút thử lại nếu Order còn PENDING.
+Nút về sự kiện nếu Order hết hạn.
+Không chuyển thẳng đến “Vé của tôi” khi webhook chưa xử lý xong.
+7. Làm lịch sử đơn hàng
+Hiện có API my-orders nhưng chưa có giao diện.
+Trang lịch sử nên hiển thị:
+Mã đơn.
+Sự kiện.
+Danh sách ghế.
+Tổng tiền.
+Thời gian tạo.
+Thời gian hết hạn.
+Trạng thái PENDING, PAID, CANCELLED, EXPIRED.
+Nút thanh toán lại nếu còn thời gian.
+Nút hủy nếu đang PENDING.
+Nút xem vé nếu đã PAID.
+Đây là chức năng khách hàng còn thiếu rõ nhất.
+8. Render QR thật
+Backend đã sinh qr_code; frontend chỉ cần dùng qrcode.vue để hiển thị mã thật.
+Cần:
+QR chứa chuỗi ticket.qr_code.
+Không hiển thị QR của Order chưa PAID.
+Hiển thị tên sự kiện, ghế và trạng thái.
+Nếu đã check-in thì QR có thể làm mờ hoặc gắn nhãn “Đã sử dụng”.
+Không cần thay đổi cách sinh QR backend hiện tại.
+9. Quét QR bằng camera
+Làm sau khi QR thật đã ổn.
+Có thể dùng html5-qrcode đã cài:
+Bật/tắt camera.
+Quét được mã vé.
+Sau khi quét gọi API check-in hiện tại.
+Hiển thị thành công/thất bại bằng SweetAlert.
+Ngăn gửi liên tục cùng một mã.
+Giữ ô nhập mã thủ công làm phương án dự phòng.
+C. Hoàn thiện chức năng Organizer
+10. Làm CRUD sự kiện
+Thứ tự nên làm:
+Danh sách sự kiện của Organizer.
+Tạo sự kiện.
+Xem chi tiết quản lý.
+Sửa thông tin sự kiện.
+Đổi trạng thái PENDING/PUBLISHED/CANCELLED.
+Xóa sự kiện nếu chưa có đơn/vé.
+Quản lý loại vé và sơ đồ ghế.
+Cần quy định rõ:
+Sự kiện đã có vé bán không được xóa trực tiếp.
+Không cho giảm số ghế nếu ghế đã được bán.
+Không cho đổi giá làm ảnh hưởng Order cũ; OrderItem.unit_price đã giúp bảo toàn giá cũ.
+Organizer chỉ nhìn thấy và quản lý sự kiện của chính mình.
+11. Dashboard dùng dữ liệu thật
+Thay ba số hard-code bằng API:
+Tổng số sự kiện.
+Số sự kiện đang mở.
+Tổng số vé đã bán.
+Tổng doanh thu từ Order PAID.
+Số vé đã check-in.
+Tổng sức chứa.
+Tỷ lệ lấp đầy.
+Doanh thu theo từng sự kiện.
+Số Order PENDING/CANCELLED/EXPIRED.
+Phiên bản đầu chỉ cần các card số liệu và một bảng theo sự kiện. Biểu đồ Chart.js có thể làm sau.
+12. Báo cáo theo từng sự kiện
+Mỗi sự kiện nên có:
+Tổng ghế.
+Ghế còn trống.
+Ghế đang giữ.
+Ghế đã bán.
+Vé đã check-in.
+Doanh thu.
+Danh sách giao dịch.
+Danh sách khách hàng/ghế.
+Xuất CSV nếu còn thời gian.
+Chỉ tính doanh thu từ Order PAID, không tính PENDING.
+D. Hoàn thiện Admin
+13. Quản lý người dùng
+Django Admin hiện đủ để làm nền, nhưng cần:
+Khóa/mở tài khoản bằng is_active.
+Lọc theo Customer/Organizer.
+Xem các Order của user.
+Xem sự kiện của Organizer.
+Không cho user bị khóa đăng nhập.
+Có test kiểm chứng user bị khóa.
+Nếu đồ án không yêu cầu dashboard Admin riêng thì dùng Django Admin cũng chấp nhận được.
+14. Duyệt sự kiện
+Nếu Use Case có Admin duyệt sự kiện:
+Organizer tạo Event PENDING
+→ Admin duyệt
+→ Event PUBLISHED
+Cần thêm:
+Lý do từ chối.
+Trạng thái REJECTED nếu Use Case yêu cầu.
+Public chỉ thấy PUBLISHED.
+Organizer xem được trạng thái sự kiện của mình.
+15. Quyết toán
+Có thể làm ở mức đơn giản:
+Tổng doanh thu sự kiện.
+Phí nền tảng.
+Số tiền trả Organizer.
+Trạng thái chưa quyết toán/đã quyết toán.
+Ngày và Admin thực hiện quyết toán.
+Chưa cần tích hợp payout PayOS thật cho đồ án.
+E. Test phải làm song song
+Không nên đợi làm hết chức năng mới viết test.
+16. Test permission và IDOR
+Cần bổ sung:
+Customer tạo sự kiện → 403.
+Customer gọi danh sách Organizer → 403.
+Organizer A sửa Event của Organizer B → 404/403.
+Customer A xem Order của Customer B → 404.
+Customer A hủy Order của Customer B → 404.
+Organizer A check-in vé của Organizer B → 403.
+User bị khóa đăng nhập → thất bại.
+User bị khóa dùng JWT cũ → bị từ chối.
+17. Test race condition
+Phải chạy bằng PostgreSQL và TransactionTestCase:
+Hai customer cùng giữ một ghế.
+Chỉ một request thành công.
+Webhook và hủy đơn chạy đồng thời.
+Hai thiết bị check-in cùng một QR.
+Webhook cùng transaction ID cho hai Order.
+SQLite không kiểm chứng chính xác select_for_update().
+18. Test thanh toán
+Cần thêm:
+Sai chữ ký.
+Thiếu transaction ID.
+Sai số tiền.
+Webhook gửi hai lần.
+Đơn đã hủy nhận webhook.
+Đơn hết hạn nhận tiền.
+Payment tạo đúng một lần.
+Ticket tạo đúng số lượng.
+Không tạo Ticket khi Order còn PENDING.
+F. Những chức năng mở rộng làm cuối
+19. AI Agent
+AI nên làm cuối cùng, sau khi nghiệp vụ chính ổn.
+Phiên bản đơn giản:
+Chat hỏi sự kiện.
+Tìm sự kiện theo thể loại, giá, thời gian và địa điểm.
+Gợi ý sự kiện.
+Trả lời chính sách mua/hủy vé.
+Lưu ChatSession và ChatMessage.
+Không để AI:
+Tự thanh toán.
+Tự xác nhận Order đã trả tiền.
+Tự check-in.
+Truy cập dữ liệu khách hàng khác.
+20. Các chức năng bổ sung nếu còn thời gian
+Email gửi vé QR.
+Quên mật khẩu.
+Refresh token.
+Thông báo sự kiện sắp diễn ra.
+Mã giảm giá.
+Hủy sự kiện và hoàn tiền.
+Xuất báo cáo CSV/PDF.
+Audit log cho Admin.
+Theo dõi lịch sử check-in.
+Responsive tốt hơn cho Organizer dashboard.
+Deploy frontend/backend và cấu hình HTTPS/CORS.
+Thứ tự triển khai đề xuất
+1. Permission Event
+2. Khóa tài khoản
+3. Transaction + validation tạo Event
+4. Test permission và IDOR
+5. Trang payment return/cancel
+6. Lịch sử đơn hàng
+7. QR thật
+8. CRUD sự kiện Organizer
+9. Dashboard API thật
+10. Báo cáo từng sự kiện
+11. Camera check-in
+12. Đối soát thanh toán đến trễ
+13. Admin duyệt sự kiện/quyết toán
+14. Race-condition test trên PostgreSQL
+15. AI Agent
+
+
+Nếu chỉ chọn một việc để làm ngay tiếp theo: sửa EventCreateView, OrganizerEventListView, quyền sở hữu Event và is_active. Đây là nhóm sửa nhỏ, dễ kiểm tra, ít ảnh hưởng code cũ và giúp nền tảng an toàn trước khi làm CRUD/Dashboard.
+
+MAIL MAIL MAIL MAIL
+
+----------------
+Hoàn thiện PayOS webhook: chữ ký, số tiền, transaction ID, chống webhook lặp.
+Hoàn thiện QR và check-in: chỉ vé PAID, chống check-in hai lần.
+Sửa permission: organizer chỉ quản lý sự kiện của mình, khóa user phải chặn đăng nhập.
+Đồng bộ frontend: payment cancel/return, countdown, trạng thái đơn và ghế.
+Dashboard và báo cáo lấy dữ liệu API thật.
+Thêm test race condition, IDOR và permission. 
+
+Những vấn đề quan trọng còn lại
+Permission sự kiện vẫn sai
+EventCreateView và danh sách sự kiện của BTC chỉ yêu cầu đăng nhập. Customer gọi vào có thể gây lỗi do code truy cập request.user.organizer, thay vì trả 403. API chi tiết cũng công khai cả sự kiện PENDING/CANCELLED. Xem [events/views.py (line 33)](/D:/SmartEventTicketing/events/views.py:33).
+Khóa tài khoản vẫn không hoạt động đúng
+Model có cả status và is_active, nhưng đăng nhập chỉ kiểm tra is_active. Trong khi Django Admin đang hiển thị/quản lý status, nên đặt status=False vẫn có thể đăng nhập. Xem [authentication/models.py (line 20)](/D:/SmartEventTicketing/authentication/models.py:20) và [authentication/serializers.py (line 74)](/D:/SmartEventTicketing/authentication/serializers.py:74).
+Tạo sự kiện có nguy cơ lỗi và dữ liệu dở dang
+Quá trình tạo Event → TicketType → Seat chưa nằm trong một transaction. Ngoài ra mọi loại vé mặc định dùng row_prefix='A'; nếu tạo nhiều loại vé không truyền prefix khác nhau, chúng có thể đụng unique constraint (event, row, number). Xem [events/serializers.py (line 27)](/D:/SmartEventTicketing/events/serializers.py:27) và [seating/models.py (line 27)](/D:/SmartEventTicketing/seating/models.py:27).
+Thanh toán đến trễ chưa có luồng đối soát
+Nếu PayOS xác nhận thành công sau khi đơn hết hạn, webhook trả ignored_expired nhưng chưa lưu bản ghi để hoàn tiền hoặc xử lý thủ công. Xem [orders/views.py (line 403)](/D:/SmartEventTicketing/orders/views.py:403).
+Frontend thanh toán còn thiếu route
+Backend mock tạo URL /payment-mock/:id, nhưng router frontend không có route này. PayOS cũng trả thẳng về /my-tickets, chưa có trang kết quả thành công, thất bại hoặc hủy riêng. Xem [orders/views.py (line 195)](/D:/SmartEventTicketing/orders/views.py:195).
+QR và Dashboard vẫn chỉ là demo
+Trang vé chỉ hiển thị icon và chuỗi qr_code, chưa render QR thật dù đã cài qrcode.vue. Dashboard vẫn hard-code 128.500.000 ₫, 450/500, 3 sự kiện. Xem [MyTicketsView.vue (line 43)](/D:/SmartEventTicketing/frontend/src/views/MyTicketsView.vue:43) và [OrganizerDashboardView.vue (line 25)](/D:/SmartEventTicketing/frontend/src/views/OrganizerDashboardView.vue:25).
+Auth frontend chưa đồng bộ hoàn chỉnh
+Router có meta.role nhưng guard không kiểm tra role. Khi API trả 401, interceptor xóa access token và user nhưng không xóa refresh token hay cập nhật Pinia state. Refresh token được lưu nhưng không có endpoint/flow refresh. API URL vẫn hard-code localhost. Xem [router/index.js (line 85)](/D:/SmartEventTicketing/frontend/src/router/index.js:85) và [api.js (line 5)](/D:/SmartEventTicketing/frontend/src/services/api.js:5).
+AI, CRUD BTC và báo cáo chưa triển khai
+ai_agent mới có model; serializer/view trống và URL không có endpoint. Organizer chưa có frontend tạo–sửa–xóa sự kiện, chưa có báo cáo doanh thu thật, payout và quản trị riêng. Xem [ai_agent/urls.py (line 3)](/D:/SmartEventTicketing/ai_agent/urls.py:3).
+
+
+
+mà từ giờ nếu có fix lỗi thì chỉnh sửa ít nhất (ít làm thay đổi cả 1 nguyên khối refactor lớn) có thể và code sao cho đơn giản ,nhìn giống 1 sinh viên nhất có thể nha
+
+
