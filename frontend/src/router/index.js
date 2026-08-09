@@ -11,10 +11,12 @@ import OrganizerDashboardView from '@/views/OrganizerDashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+
   routes: [
     {
       path: '/',
       name: 'home',
+      alias: '/HomeView',
       component: HomeView
     },
     {
@@ -26,55 +28,77 @@ const router = createRouter({
       path: '/checkout/:orderId',
       name: 'checkout',
       component: CheckoutView,
-      meta: { requiresAuth: true, role: 'CUSTOMER' }
+      meta: {
+        requiresAuth: true,
+        role: 'CUSTOMER'
+      }
     },
     {
       path: '/login',
       name: 'login',
       component: LoginView,
-      meta: { guestOnly: true }
+      meta: {
+        guestOnly: true
+      }
     },
     {
       path: '/register',
       name: 'register',
       component: RegisterView,
-      meta: { guestOnly: true }
+      meta: {
+        guestOnly: true
+      }
     },
     {
       path: '/my-tickets',
       name: 'my-tickets',
       component: MyTicketsView,
-      meta: { requiresAuth: true, role: 'CUSTOMER' }
+      meta: {
+        requiresAuth: true,
+        role: 'CUSTOMER'
+      }
     },
     {
       path: '/organizer/dashboard',
       name: 'organizer-dashboard',
       component: OrganizerDashboardView,
-      meta: { requiresAuth: true, role: 'ORGANIZER' }
+      meta: {
+        requiresAuth: true,
+        role: 'ORGANIZER'
+      }
     },
     {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/ProfileView.vue'),
-      meta: { requiresAuth: true }
+      meta: {
+        requiresAuth: true
+      }
     }
   ],
+
   scrollBehavior() {
     return { top: 0 }
   }
 })
 
-router.beforeEach((to, from) => {
+router.beforeEach((to) => {
   const authStore = useAuthStore()
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+    return {
+      name: 'login',
+      query: {
+        redirect: to.fullPath
+      }
+    }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     if (authStore.isOrganizer) {
       return { name: 'organizer-dashboard' }
     }
+
     return { name: 'home' }
   }
 })

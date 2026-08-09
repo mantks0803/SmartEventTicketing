@@ -55,7 +55,7 @@ def expire_order(order_id, now=None):
     order.save(update_fields=['status', 'payos_checkout_url', 'updated_at'])
     return True
 
-
+#cleaning up stale orders that have expired but not yet marked as expired
 def expire_stale_orders(now=None):
     now = now or timezone.now()
     order_ids = list(
@@ -184,10 +184,10 @@ def cancel_pending_order(order_id, customer=None):
     order.save(update_fields=['status', 'payos_checkout_url', 'updated_at'])
     return order
 
+
 @transaction.atomic
 def confirm_order_payment(order_id, amount, transaction_id=None):
-    order = Order.objects.select_for_update().get(id=order_id)
-
+    order = (Order.objects.select_for_update().get(id=order_id))
     if order.status == OrderStatusEnum.PAID:
         return order, False
 
@@ -270,3 +270,6 @@ def confirm_order_payment(order_id, amount, transaction_id=None):
         )
 
     return order, True
+
+
+
