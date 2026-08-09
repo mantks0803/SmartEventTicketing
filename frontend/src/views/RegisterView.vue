@@ -106,7 +106,7 @@
           </div>
 
           <div v-if="form.role === 'CUSTOMER'" class="mb-3">
-            <label class="form-label fw-semibold small">Ngày sinh <span class="text-muted fs-8">(Tùy chọn)</span></label>
+            <label class="form-label fw-semibold small">Ngày sinh <span class="text-muted fs-8">(Tháng - Ngày - Năm)</span></label>
             <input
               v-model="form.dob"
               type="date"

@@ -32,20 +32,22 @@ from orders.utils import send_payment_success_email
 
 
 try:
-    from payos import ItemData, PayOS, PaymentData
+    from payos import PayOS
+    from payos.type import PaymentData
 
     payos_credentials = (
         getattr(settings, 'PAYOS_CLIENT_ID', ''),
         getattr(settings, 'PAYOS_API_KEY', ''),
         getattr(settings, 'PAYOS_CHECKSUM_KEY', ''),
     )
+
     payos = PayOS(
         client_id=payos_credentials[0],
         api_key=payos_credentials[1],
         checksum_key=payos_credentials[2],
     ) if all(payos_credentials) else None
+
 except ImportError:
-    ItemData = None
     PaymentData = None
     payos = None
 
