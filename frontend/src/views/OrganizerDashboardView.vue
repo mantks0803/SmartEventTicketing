@@ -435,7 +435,7 @@ const getStatusText = (status) => {
   const labels = {
     PUBLISHED: 'Đang công khai',
     PENDING: 'Chờ duyệt',
-    CANCELLED: 'Đã hủy'
+    CANCELLED: 'Bị từ chối'
   }
 
   return labels[status] || status
@@ -526,7 +526,11 @@ const EventList = defineComponent({
               h('img', {
                 src: event.thumbnail,
                 alt: event.title,
-                class: 'event-thumbnail'
+                class: 'event-thumbnail',
+                loading: 'lazy',
+                onError: (imageEvent) => {
+                  imageEvent.target.src = '/ticket_icon_150905.png'
+                }
               }),
 
               h(
@@ -821,34 +825,47 @@ onMounted(fetchEvents)
   color: #7C3AED;
 }
 
-.event-row {
-  padding: 14px 0;
-  border-bottom: 1px solid #E2E8F0;
+/* EventList là component con nên dùng :deep để scoped CSS áp dụng đúng. */
+:deep(.event-list) {
+  display: grid;
+  gap: 12px;
+}
+
+:deep(.event-row) {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
-.event-row:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
+:deep(.event-row:hover) {
+  border-color: #BFDBFE;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
 }
 
-.event-thumbnail {
-  width: 112px;
-  height: 72px;
+:deep(.event-thumbnail) {
+  width: 124px;
+  height: 82px;
   flex-shrink: 0;
   border-radius: 12px;
   object-fit: cover;
   background: #E2E8F0;
 }
 
-.event-main {
+:deep(.event-main) {
   min-width: 0;
   flex: 1;
 }
 
-.event-meta {
+:deep(.event-meta) {
   margin-top: 7px;
   color: #64748B;
   font-size: 0.8rem;
@@ -857,35 +874,36 @@ onMounted(fetchEvents)
   gap: 16px;
 }
 
-.event-status {
+:deep(.event-status) {
   padding: 4px 9px;
   border-radius: 999px;
   font-size: 0.68rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
-.status-published {
+:deep(.status-published) {
   background: #D1FAE5;
   color: #047857;
 }
 
-.status-pending {
+:deep(.status-pending) {
   background: #FEF3C7;
   color: #B45309;
 }
 
-.status-cancelled {
+:deep(.status-cancelled) {
   background: #FEE2E2;
   color: #B91C1C;
 }
 
-.empty-state,
+:deep(.empty-state),
 .checkin-box {
   padding: 50px 20px;
   text-align: center;
 }
 
-.empty-icon,
+:deep(.empty-icon),
 .checkin-icon {
   color: #2563EB;
   font-size: 3rem;
@@ -927,15 +945,32 @@ onMounted(fetchEvents)
     width: 100%;
   }
 
-  .section-heading,
-  .event-row {
+  .section-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .event-thumbnail {
+  :deep(.event-row) {
+    padding: 10px;
+    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  :deep(.event-thumbnail) {
+    width: 92px;
+    height: 70px;
+    border-radius: 10px;
+  }
+
+  :deep(.event-meta) {
+    gap: 6px 12px;
+  }
+
+  :deep(.event-row > .btn) {
     width: 100%;
-    height: 170px;
+    grid-column: 1 / -1;
   }
 }
 </style>

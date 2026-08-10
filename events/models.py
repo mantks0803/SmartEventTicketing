@@ -20,7 +20,7 @@ class Event(models.Model):
     location = models.CharField(max_length=250)
     start_time = models.DateTimeField()
     category = models.CharField(max_length=50, choices=EventCategoryEnum.choices, default=EventCategoryEnum.MUSIC)
-    status = models.CharField(max_length=20, choices=EventStatusEnum.choices, default=EventStatusEnum.PUBLISHED)
+    status = models.CharField(max_length=20, choices=EventStatusEnum.choices, default=EventStatusEnum.PENDING)
     is_payout_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

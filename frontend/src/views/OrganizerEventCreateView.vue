@@ -82,24 +82,33 @@
                   Ảnh sự kiện <span class="text-danger">*</span>
                 </label>
                 <input
-                  v-model.trim="form.thumbnail"
-                  type="url"
+                  ref="fileInputRef"
+                  type="file"
                   class="form-control"
-                  placeholder="https://example.com/event.jpg"
+                  accept="image/jpeg,image/png,image/webp"
+                  @change="handleThumbnailChange"
                   required
                 />
 
+                <small class="text-muted d-block mt-2">
+                  Chọn ảnh JPG, PNG hoặc WEBP, dung lượng tối đa 5MB.
+                </small>
+
                 <img
-                  v-if="form.thumbnail"
-                  :src="form.thumbnail"
+                  v-if="thumbnailPreview"
+                  :src="thumbnailPreview"
+                  alt="Xem trước ảnh sự kiện"
                   class="thumbnail-preview mt-3"
-                  @error="thumbnailError = true"
-                  @load="thumbnailError = false"
                 />
 
-                <small v-if="thumbnailError" class="text-danger d-block mt-2">
-                  Không thể tải ảnh từ đường dẫn này.
-                </small>
+                <button
+                  v-if="thumbnailPreview"
+                  type="button"
+                  class="btn btn-sm btn-outline-danger rounded-pill mt-2"
+                  @click="clearThumbnail"
+                >
+                  <i class="bi bi-trash me-1"></i>Xóa ảnh
+                </button>
               </div>
 
               <div class="mb-3">
@@ -354,7 +363,7 @@
                   v-if="submitting"
                   class="spinner-border spinner-border-sm me-2"
                 ></span>
-                {{ submitting ? 'Đang tạo sự kiện...' : 'Tạo sự kiện' }}
+                {{ submitButtonText }}
               </button>
             </div>
           </div>
@@ -372,13 +381,15 @@ import apiClient from '@/services/api'
 
 const router = useRouter()
 const submitting = ref(false)
-const thumbnailError = ref(false)
+const submitStep = ref('')
+const thumbnailFile = ref(null)
+const thumbnailPreview = ref('')
+const fileInputRef = ref(null)
 const selectedPreset = ref('custom')
 let localId = 1
 
 const form = reactive({
   title: '',
-  thumbnail: '',
   description: '',
   location: '',
   start_time: '',
@@ -555,10 +566,68 @@ const minDateTime = computed(() => {
   )
 })
 
+const submitButtonText = computed(() => {
+  if (!submitting.value) return 'Tạo sự kiện'
+  if (submitStep.value === 'upload') return 'Đang tải ảnh...'
+  return 'Đang tạo sự kiện...'
+})
+
+const clearThumbnail = () => {
+  thumbnailFile.value = null
+  thumbnailPreview.value = ''
+
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
+const handleThumbnailChange = async (event) => {
+  const file = event.target.files?.[0]
+
+  if (!file) {
+    clearThumbnail()
+    return
+  }
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+
+  if (!validTypes.includes(file.type)) {
+    clearThumbnail()
+    await Swal.fire({
+      title: 'Định dạng ảnh không hợp lệ',
+      text: 'Vui lòng chọn ảnh JPG, PNG hoặc WEBP.',
+      icon: 'warning',
+      confirmButtonColor: '#2563EB',
+      customClass: { popup: 'rounded-4' }
+    })
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    clearThumbnail()
+    await Swal.fire({
+      title: 'Dung lượng ảnh quá lớn',
+      text: 'Ảnh sự kiện không được vượt quá 5MB.',
+      icon: 'warning',
+      confirmButtonColor: '#2563EB',
+      customClass: { popup: 'rounded-4' }
+    })
+    return
+  }
+
+  thumbnailFile.value = file
+
+  const reader = new FileReader()
+  reader.onload = (readerEvent) => {
+    thumbnailPreview.value = readerEvent.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
 const validateForm = () => {
   if (
     !form.title
-    || !form.thumbnail
+    || !thumbnailFile.value
     || !form.description
     || !form.location
     || !form.start_time
@@ -658,28 +727,55 @@ const submitEvent = async () => {
 
   submitting.value = true
 
-  const payload = {
-    title: form.title,
-    thumbnail: form.thumbnail,
-    description: form.description,
-    location: form.location,
-    start_time: new Date(form.start_time).toISOString(),
-    category: form.category,
-    ticket_types: ticketTypes.value.map((ticket) => ({
-      name: ticket.name.trim(),
-      price: Number(ticket.price),
-      total_rows: Number(ticket.total_rows),
-      seats_per_row: Number(ticket.seats_per_row),
-      row_prefix: ticket.row_prefix.trim().toUpperCase()
-    }))
-  }
-
   try {
+    // Upload ảnh trước để API tạo sự kiện vẫn giữ payload JSON đơn giản như cũ.
+    submitStep.value = 'upload'
+
+    const imageData = new FormData()
+    imageData.append('thumbnail', thumbnailFile.value)
+
+    const uploadResponse = await apiClient.post(
+      'events/upload-thumbnail/',
+      imageData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    )
+
+    const thumbnailUrl = (
+      uploadResponse.data.thumbnail
+      || uploadResponse.data.secure_url
+    )
+
+    if (!thumbnailUrl) {
+      throw new Error('Không nhận được đường dẫn ảnh sau khi upload.')
+    }
+
+    submitStep.value = 'create'
+
+    const payload = {
+      title: form.title,
+      thumbnail: thumbnailUrl,
+      description: form.description,
+      location: form.location,
+      start_time: new Date(form.start_time).toISOString(),
+      category: form.category,
+      ticket_types: ticketTypes.value.map((ticket) => ({
+        name: ticket.name.trim(),
+        price: Number(ticket.price),
+        total_rows: Number(ticket.total_rows),
+        seats_per_row: Number(ticket.seats_per_row),
+        row_prefix: ticket.row_prefix.trim().toUpperCase()
+      }))
+    }
+
     const response = await apiClient.post('events/create/', payload)
 
     await Swal.fire({
-      title: 'Tạo sự kiện thành công!',
-      text: `Sự kiện đã được tạo với ${totalSeats.value} ghế.`,
+      title: 'Đã gửi sự kiện thành công!',
+      text: `Sự kiện có ${totalSeats.value} ghế đang chờ quản trị viên duyệt.`,
       icon: 'success',
       confirmButtonText: 'Về Dashboard',
       confirmButtonColor: '#10B981',
@@ -708,6 +804,7 @@ const submitEvent = async () => {
     })
   } finally {
     submitting.value = false
+    submitStep.value = ''
   }
 }
 

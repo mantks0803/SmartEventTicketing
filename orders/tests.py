@@ -8,7 +8,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from authentication.models import Customer, Organizer, User
-from events.models import Event, TicketType
+from events.models import Event, EventStatusEnum, TicketType
 from orders.models import OrderStatusEnum, Payment, Ticket
 from orders.services import (
     OrderLifecycleError,
@@ -84,7 +84,58 @@ class OrderLifecycleTests(TestCase):
             description='Test event',
             location='TP.HCM',
             start_time=timezone.now() + timedelta(days=1),
+            status=EventStatusEnum.PUBLISHED,
         )
+
+    def test_pending_event_cannot_be_held(self):
+        self.event.status = EventStatusEnum.PENDING
+        self.event.save(update_fields=['status'])
+
+        with self.assertRaises(OrderLifecycleError) as context:
+            hold_seats(self.customer, [self.seats[0].id])
+
+        self.assertEqual(context.exception.code, 'event_not_published')
+
+    def test_started_event_cannot_be_held(self):
+        self.event.start_time = timezone.now() - timedelta(minutes=1)
+        self.event.save(update_fields=['start_time'])
+
+        with self.assertRaises(OrderLifecycleError) as context:
+            hold_seats(self.customer, [self.seats[0].id])
+
+        self.assertEqual(context.exception.code, 'event_already_started')
+
+    def test_payos_link_is_blocked_after_event_is_cancelled(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        self.event.status = EventStatusEnum.CANCELLED
+        self.event.save(update_fields=['status'])
+
+        client = APIClient()
+        client.force_authenticate(self.customer.user)
+        response = client.post(
+            f'/api/orders/{order.id}/payos-link/',
+            {},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['code'], 'event_not_published')
+
+    def test_payos_link_is_blocked_after_event_has_started(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        self.event.start_time = timezone.now() - timedelta(minutes=1)
+        self.event.save(update_fields=['start_time'])
+
+        client = APIClient()
+        client.force_authenticate(self.customer.user)
+        response = client.post(
+            f'/api/orders/{order.id}/payos-link/',
+            {},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data['code'], 'event_already_started')
 
     def test_hold_creates_order_items_without_issuing_tickets(self):
         order = hold_seats(self.customer, [self.seats[0].id, self.seats[1].id])

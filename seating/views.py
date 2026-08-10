@@ -1,17 +1,24 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
 from seating.models import Seat
 from seating.serializers import SeatSerializer
 from orders.services import expire_stale_orders
+from events.models import Event, EventStatusEnum
 
 class EventSeatMatrixView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, event_id):
         expire_stale_orders()
+        event = get_object_or_404(
+            Event,
+            id=event_id,
+            status=EventStatusEnum.PUBLISHED,
+        )
         seats = (
-            Seat.objects.filter(event_id=event_id)
+            Seat.objects.filter(event=event)
             .select_related('ticket_type')
             .order_by('ticket_type_id', 'row', 'number')
         )

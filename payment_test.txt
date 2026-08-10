@@ -1,96 +1,131 @@
-HƯỚNG DẪN TEST THANH TOÁN PAYOS GIẢ LẬP
+HƯỚNG DẪN TEST THANH TOÁN GIẢ LẬP
 KHÔNG DÙNG NGÂN HÀNG - KHÔNG CHUYỂN TIỀN THẬT
 ============================================================
 
-MỤC ĐÍCH
-------------------------------------------------------------
-Chế độ này dùng để kiểm tra đầy đủ luồng thanh toán trong môi
-trường phát triển mà không cần quét QR ngân hàng hay chuyển tiền.
+Tài liệu này khớp với luồng code hiện tại:
 
-Sau khi giả lập thành công, hệ thống vẫn thực hiện giống webhook
-PayOS thật:
-
-1. Order chuyển từ PENDING sang PAID.
-2. Payment được tạo với trạng thái SUCCESS.
-3. Ghế chuyển từ LOCKED sang SOLD.
-4. Ticket và mã QR được tạo.
-5. Email xác nhận được gửi hoặc in ra terminal.
-6. Trang kết quả hiển thị "Thanh toán thành công".
-7. Vé xuất hiện trong trang "Vé của tôi".
+Chọn ghế
+    -> tạo Order PENDING và khóa ghế
+    -> mở trang kết quả thanh toán giả lập
+    -> gửi webhook PayOS giả
+    -> Order PAID
+    -> Seat SOLD
+    -> tạo Payment SUCCESS
+    -> tạo Ticket và QR
+    -> gửi/in email
+    -> vé xuất hiện trong "Vé của tôi"
 
 
-CẢNH BÁO QUAN TRỌNG
-------------------------------------------------------------
-PAYOS_SKIP_SIGNATURE_CHECK=True chỉ được sử dụng khi test local.
+1. CHẾ ĐỘ NÀY TEST ĐƯỢC GÌ?
+============================================================
 
-Khi bật chế độ này, backend bỏ qua bước kiểm tra chữ ký webhook
-của PayOS. Không được bật True khi deploy website lên internet.
+Chế độ giả lập test được phần nghiệp vụ của website:
 
-Sau khi test xong phải đổi lại:
+- Giữ ghế trong 10 phút.
+- Tạo Order và OrderItem.
+- Nhận webhook thanh toán thành công.
+- Kiểm tra số tiền.
+- Chống webhook lặp.
+- Chuyển Order sang PAID.
+- Chuyển Seat sang SOLD.
+- Tạo Payment SUCCESS.
+- Tạo Ticket và mã QR.
+- Hiển thị trang "Thanh toán thành công".
+- Hiển thị vé trong "Vé của tôi".
+- Gửi email thật hoặc in email trong terminal.
+- Check-in QR và chống check-in hai lần.
+
+Chế độ này KHÔNG tạo giao dịch thật trên PayOS, không tạo QR ngân hàng thật,
+không trừ tiền và không xuất hiện trong lịch sử giao dịch PayOS thật.
+
+Webhook được gửi thủ công từ PowerShell hoặc Postman để giả lập việc PayOS
+gọi về backend sau khi khách hàng đã thanh toán.
+
+
+2. CẢNH BÁO AN TOÀN
+============================================================
+
+PAYOS_SKIP_SIGNATURE_CHECK=True chỉ được dùng khi test local.
+
+Khi bật True, endpoint webhook chấp nhận payload không có chữ ký PayOS thật.
+Nếu bật trên website public, người khác có thể tự gửi webhook giả để biến đơn
+hàng thành PAID.
+
+Sau khi test xong bắt buộc đổi lại:
 
 PAYOS_SKIP_SIGNATURE_CHECK=False
 
+Không commit file .env hoặc mật khẩu email lên GitHub.
 
-PHẦN 1 - CHUẨN BỊ
+
+3. CHUẨN BỊ FILE .ENV
 ============================================================
 
-Bước 1. Mở thư mục project
-------------------------------------------------------------
-Mở PowerShell tại:
+Bước 1. Mở PowerShell tại thư mục project:
 
 D:\SmartEventTicketing
 
 
-Bước 2. Mở file .env
-------------------------------------------------------------
-Tìm dòng:
+Bước 2. Mở file:
 
-PAYOS_SKIP_SIGNATURE_CHECK=False
+D:\SmartEventTicketing\.env
 
-Đổi thành:
+
+Bước 3. Đổi cấu hình PayOS mock thành:
 
 PAYOS_SKIP_SIGNATURE_CHECK=True
 
+Giá trị phải đúng chữ hoa/chữ thường như trên vì settings đang so sánh với
+chuỗi "True".
 
-Bước 3. Chọn cách xử lý email khi test
+
+Bước 4. Chọn một trong hai cách test email.
+
+------------------------------------------------------------
+CÁCH A - KHÔNG GỬI EMAIL THẬT, IN EMAIL TRONG TERMINAL
 ------------------------------------------------------------
 
-Cách A - Không gửi email thật, chỉ in email trong terminal
-(khuyên dùng khi test nhiều lần):
+Khuyên dùng khi test nhiều lần:
 
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
 
 Kết quả:
-- Không có email thật được gửi.
-- Tiêu đề và nội dung email xuất hiện trong terminal backend.
+
+- Không gửi thư ra internet.
+- Tiêu đề, text và HTML email được in trong terminal chạy Django.
+- Vẫn test được việc hàm email được gọi sau khi phát hành vé.
 
 
-Cách B - Gửi email thật đến email tài khoản khách hàng:
+------------------------------------------------------------
+CÁCH B - GỬI EMAIL THẬT
+------------------------------------------------------------
 
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-
-Đồng thời .env phải có:
-
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
+EMAIL_TIMEOUT=10
 EMAIL_HOST_USER=your_email@gmail.com
-EMAIL_HOST_PASSWORD=your_app_password
+EMAIL_HOST_PASSWORD=your_gmail_app_password
 DEFAULT_FROM_EMAIL="SmartTicket <your_email@gmail.com>"
 
 Lưu ý:
-- EMAIL_HOST_PASSWORD phải là App Password của Gmail.
-- Không sử dụng mật khẩu đăng nhập Gmail thông thường.
-- Không đưa file .env hoặc App Password lên GitHub.
+
+- EMAIL_HOST_PASSWORD phải là Gmail App Password.
+- Không dùng mật khẩu Gmail đăng nhập thông thường.
+- Email trong tài khoản Customer phải là email có thể nhận thư.
+- Kiểm tra Inbox, Spam và Promotions sau khi test.
 
 
-Bước 4. Khởi động lại backend
-------------------------------------------------------------
-Mọi thay đổi trong .env chỉ có hiệu lực sau khi backend được
-khởi động lại.
+4. KHỞI ĐỘNG LẠI BACKEND VÀ FRONTEND
+============================================================
 
-Chạy:
+Thay đổi .env chỉ chắc chắn có hiệu lực sau khi tắt và chạy lại backend.
 
+
+Bước 1. Chạy backend:
+
+cd D:\SmartEventTicketing
 .\venv\Scripts\python.exe manage.py runserver
 
 Kết quả mong đợi:
@@ -98,9 +133,7 @@ Kết quả mong đợi:
 Starting development server at http://127.0.0.1:8000/
 
 
-Bước 5. Khởi động frontend
-------------------------------------------------------------
-Mở PowerShell thứ hai:
+Bước 2. Mở PowerShell khác và chạy frontend:
 
 cd D:\SmartEventTicketing\frontend
 npm.cmd run dev
@@ -110,119 +143,175 @@ Kết quả mong đợi:
 Local: http://localhost:5173/
 
 
-PHẦN 2 - TẠO ĐƠN HÀNG CẦN TEST
+Bước 3. Có thể kiểm tra backend đã đọc đúng chế độ mock bằng lệnh:
+
+cd D:\SmartEventTicketing
+.\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print('PAYOS mock =', settings.PAYOS_SKIP_SIGNATURE_CHECK); print('Email backend =', settings.EMAIL_BACKEND)"
+
+Kết quả đúng phải có:
+
+PAYOS mock = True
+
+Nếu vẫn là False, hãy tắt hẳn terminal runserver và khởi động lại backend.
+
+
+5. TẠO ĐƠN HÀNG TEST
 ============================================================
 
-Bước 1. Mở website
-------------------------------------------------------------
-Truy cập:
+Bước 1. Truy cập:
 
 http://localhost:5173/
 
 
-Bước 2. Đăng nhập tài khoản khách hàng
-------------------------------------------------------------
-Phải đăng nhập tài khoản có role/type là CUSTOMER.
+Bước 2. Đăng nhập bằng tài khoản có role/type CUSTOMER.
 
-Nếu muốn kiểm tra email thật, email của tài khoản khách hàng phải
-là địa chỉ email có thể nhận thư.
+Không dùng tài khoản ORGANIZER vì API giữ ghế và thanh toán chỉ cho CUSTOMER.
 
 
-Bước 3. Chọn sự kiện và ghế
-------------------------------------------------------------
-1. Mở một sự kiện đang PUBLISHED.
-2. Chọn từ 1 đến 5 ghế còn AVAILABLE.
-3. Nhấn nút tiếp tục hoặc đặt vé.
+Bước 3. Mở một Event đang PUBLISHED.
+
+
+Bước 4. Nhấn "Mở sơ đồ chọn ghế".
+
+
+Bước 5. Chọn từ 1 đến 5 ghế AVAILABLE.
+
+Không chọn ghế LOCKED hoặc SOLD.
+
+
+Bước 6. Nhấn "Giữ ghế ngay".
 
 Kết quả mong đợi:
-- Backend tạo một Order có trạng thái PENDING.
-- Các ghế được chọn chuyển sang LOCKED.
-- Đơn có thời gian giữ ghế khoảng 10 phút.
-- Trình duyệt chuyển đến trang checkout.
+
+- Backend trả POST /api/orders/hold/ HTTP 201.
+- Order được tạo với status PENDING.
+- Ghế chuyển từ AVAILABLE sang LOCKED.
+- locked_by_order trỏ về Order vừa tạo.
+- expires_at cách thời điểm tạo khoảng 10 phút.
+- Chưa có Payment.
+- Chưa có Ticket.
+- Trình duyệt chuyển sang /checkout/{orderId}.
 
 
-Bước 4. Ghi lại mã đơn và tổng tiền
-------------------------------------------------------------
-Ví dụ trang checkout hiển thị:
+Bước 7. Ghi lại hai giá trị trên trang checkout:
+
+- Mã đơn hàng.
+- Tổng tiền chính xác.
+
+Ví dụ:
 
 Mã đơn hàng: 25
 Tổng tiền: 300.000 VNĐ
 
-Khi gửi webhook giả phải dùng chính xác:
+Khi tạo webhook phải dùng:
 
 orderCode = 25
 amount = 300000
 
-Không nhập dấu chấm hoặc chữ VNĐ trong amount.
+Không dùng:
+
+amount = 300.000
+amount = "300000 VNĐ"
+amount = ID ghế
+amount = ID sự kiện
 
 
-Bước 5. Nhấn "Thanh toán qua PayOS"
-------------------------------------------------------------
-Khi PAYOS_SKIP_SIGNATURE_CHECK=True, hệ thống không mở website
-ngân hàng và không tạo giao dịch tiền thật.
+6. MỞ TRANG THANH TOÁN GIẢ LẬP
+============================================================
 
-Trình duyệt được chuyển đến URL tương tự:
+Bước 1. Tại checkout, nhấn "Thanh toán qua PayOS".
+
+Frontend gọi:
+
+POST /api/orders/{orderId}/payos-link/
+
+
+Bước 2. Vì PAYOS_SKIP_SIGNATURE_CHECK=True, backend không tạo Payment Link
+PayOS thật. Backend trả URL local dạng:
 
 http://localhost:5173/payment/result?orderId=25
 
-Trang sẽ hiển thị:
+
+Bước 3. Trang hiển thị:
 
 "Đang xác nhận thanh toán"
 
-Điều này là bình thường. Đơn vẫn đang PENDING cho đến khi webhook
-giả ở phần tiếp theo được gửi thành công.
+Điều này là bình thường. Đơn vẫn đang PENDING vì chưa gửi webhook giả.
+
+Trang mới sẽ gọi:
+
+POST /api/orders/25/reconcile-payos/
+
+Trong chế độ mock, PayOS thật không có giao dịch mới này. Vì vậy reconcile có
+thể tạm trả lỗi/waiting. Sau khi webhook giả chuyển Order local thành PAID,
+lần kiểm tra tiếp theo sẽ trả success ngay mà không cần hỏi PayOS.
+
+Nên gửi webhook giả trong vòng 10 phút để kết quả dễ dự đoán nhất.
 
 
-PHẦN 3 - GỬI WEBHOOK THANH TOÁN THÀNH CÔNG GIẢ
+7. GIẢ LẬP THANH TOÁN THÀNH CÔNG BẰNG POWERSHELL
 ============================================================
 
-CÁCH 1 - DÙNG POWERSHELL (KHUYÊN DÙNG)
-------------------------------------------------------------
+Đây là cách khuyên dùng.
 
-Bước 1. Mở PowerShell thứ ba
 
-Bước 2. Sửa orderCode và amount trong lệnh dưới đây cho đúng với
-đơn hàng vừa tạo.
+Bước 1. Mở PowerShell thứ ba.
 
-Ví dụ đơn #25 có tổng tiền 300.000 VNĐ:
 
-$body = @{
+Bước 2. Khai báo đúng ID đơn và tổng tiền.
+
+Ví dụ đơn #25, tổng tiền 300000:
+
+$testOrderId = 25
+$testAmount = 300000
+$testReference = "MOCK-$testOrderId-$(Get-Date -Format 'yyyyMMddHHmmssfff')"
+
+
+Bước 3. Tạo payload webhook giả:
+
+$testPayload = @{
     success = $true
     code = "00"
     desc = "success"
     data = @{
-        orderCode = 25
-        amount = 300000
-        reference = "MOCK-$(Get-Date -Format 'yyyyMMddHHmmssfff')"
+        orderCode = $testOrderId
+        amount = $testAmount
+        reference = $testReference
     }
 } | ConvertTo-Json -Depth 5
+
+
+Bước 4. Gửi webhook:
 
 Invoke-RestMethod `
     -Uri "http://127.0.0.1:8000/api/orders/webhook/payos/" `
     -Method Post `
     -ContentType "application/json" `
-    -Body $body
+    -Body $testPayload
 
 
-Bước 3. Kiểm tra kết quả PowerShell
-------------------------------------------------------------
+Bước 5. Kiểm tra kết quả PowerShell.
+
 Kết quả đúng:
 
 status
 ------
 success
 
-Hoặc dữ liệu JSON tương đương:
+Tương đương JSON:
 
 {
     "status": "success"
 }
 
+Nếu nhận amount_mismatch thì số tiền trong $testAmount chưa đúng với tổng
+tiền của Order.
 
-CÁCH 2 - DÙNG POSTMAN
-------------------------------------------------------------
 
-Bước 1. Tạo request mới
+8. GIẢ LẬP BẰNG POSTMAN
+============================================================
+
+Bước 1. Tạo request mới.
 
 Method:
 
@@ -233,9 +322,12 @@ URL:
 http://127.0.0.1:8000/api/orders/webhook/payos/
 
 
-Bước 2. Chọn Body -> raw -> JSON
+Bước 2. Chọn:
 
-Bước 3. Nhập dữ liệu sau và sửa orderCode, amount cho đúng:
+Body -> raw -> JSON
+
+
+Bước 3. Nhập payload và sửa orderCode, amount cho đúng:
 
 {
     "success": true,
@@ -248,7 +340,8 @@ Bước 3. Nhập dữ liệu sau và sửa orderCode, amount cho đúng:
     }
 }
 
-Bước 4. Nhấn Send
+
+Bước 4. Nhấn Send.
 
 Kết quả mong đợi:
 
@@ -258,105 +351,163 @@ HTTP 200 OK
     "status": "success"
 }
 
-Lưu ý:
-- Mỗi giao dịch nên dùng reference khác nhau.
-- Không dùng lại reference của một giao dịch khác.
-- Với PowerShell, reference đã tự đổi theo thời gian.
-- Với Postman, hãy tự đổi 001 thành 002, 003... cho mỗi lần test.
+
+Lưu ý về reference:
+
+- Mỗi giao dịch test mới nên có reference mới.
+- Không dùng reference của Order trước cho Order khác.
+- PowerShell ở phần trên tự tạo reference theo thời gian.
+- Nếu dùng Postman, đổi 001 thành 002, 003... cho các đơn tiếp theo.
 
 
-PHẦN 4 - KẾT QUẢ NHẬN ĐƯỢC SAU WEBHOOK
+9. KẾT QUẢ SAU KHI WEBHOOK THÀNH CÔNG
 ============================================================
 
-1. Trang kết quả thanh toán
-------------------------------------------------------------
-Trong tối đa khoảng 2 giây, trang payment/result sẽ tự gọi lại API
-đơn hàng và chuyển từ:
-
-"Đang xác nhận thanh toán"
-
-sang:
-
-"Thanh toán thành công!"
-
-Trang hiển thị:
-- Mã đơn hàng.
-- Tên sự kiện.
-- Trạng thái đã thanh toán.
-- Tổng tiền.
-- Nút "Xem vé của tôi".
-
-Không cần tải lại trang bằng tay.
-
-
-2. Trạng thái trong database
-------------------------------------------------------------
-Backend thực hiện:
+Backend chạy confirm_order_payment() trong transaction và thực hiện:
 
 Order.status = PAID
-Payment.status = SUCCESS
 Seat.status = SOLD
+Seat.locked_until = null
+Seat.locked_by_order = null
+Payment.status = SUCCESS
+Payment.provider = PAYOS
+Payment.transaction_id = reference vừa gửi
 Ticket được tạo cho từng ghế
+Ticket.qr_code được tạo duy nhất
 
-Mỗi Ticket có một qr_code duy nhất.
+
+Trang payment/result:
+
+- Thường cập nhật trong khoảng 2 giây.
+- Hiển thị "Thanh toán thành công!".
+- Hiển thị mã đơn, sự kiện và tổng tiền.
+- Hiện SweetAlert toast thành công.
+- Có nút "Xem vé của tôi".
+
+Nếu trang đã chuyển sang trạng thái waiting trước khi gửi webhook:
+
+- Nhấn "Kiểm tra lại"; hoặc
+- Tải lại /payment/result?orderId={id}.
+
+Không cần gửi webhook lần thứ hai.
 
 
-3. Email xác nhận
+10. KIỂM TRA DATABASE
+============================================================
+
+Thay số 25 thành Order ID của bạn:
+
+.\venv\Scripts\python.exe manage.py shell -c "from orders.models import Order; o=Order.objects.get(id=25); print('Order =', o.status); print('Payments =', o.payments.count()); print('Tickets =', o.tickets.count()); print('Seats =', [(i.seat.seat_name, i.seat.status) for i in o.items.select_related('seat')])"
+
+Ví dụ mua 2 ghế, kết quả đúng:
+
+Order = PAID
+Payments = 1
+Tickets = 2
+Seats = [('VIP1-1', 'SOLD'), ('VIP1-2', 'SOLD')]
+
+
+11. KIỂM TRA EMAIL
+============================================================
+
+------------------------------------------------------------
+NẾU DÙNG CONSOLE EMAIL BACKEND
 ------------------------------------------------------------
 
-Nếu dùng console email backend:
-- Nội dung email xuất hiện trong terminal đang chạy Django.
-- Email có tên sự kiện, thời gian, địa điểm, ghế, tổng tiền và
-  đường dẫn xem vé.
+Xem terminal đang chạy Django.
 
-Nếu dùng SMTP email backend:
-- Email được gửi đến email của tài khoản khách hàng.
-- Kiểm tra cả Inbox, Spam và Promotions.
+Email phải có:
 
-Email không gửi lại khi cùng một webhook được gửi lặp.
+- Subject chứa mã Order.
+- Tên khách hàng.
+- Tên Event.
+- Thời gian và địa điểm.
+- Tổng tiền.
+- Danh sách loại vé và ghế.
+- Link /my-tickets?order={orderId}.
+
+Không có email thật trong Inbox vì console backend chỉ in email.
 
 
-4. Ví vé điện tử
 ------------------------------------------------------------
-Nhấn "Xem vé của tôi" hoặc truy cập:
+NẾU DÙNG SMTP EMAIL BACKEND
+------------------------------------------------------------
+
+Kiểm tra email của tài khoản Customer:
+
+- Inbox.
+- Spam.
+- Promotions.
+
+Email hiện không nhúng ảnh QR trực tiếp. Email có nút dẫn về trang "Vé của
+tôi", nơi frontend render QR từ ticket.qr_code.
+
+Nếu SMTP lỗi thì Payment và Ticket vẫn giữ trạng thái thành công. Lỗi email
+được ghi trong terminal backend.
+
+
+12. KIỂM TRA VÉ VÀ QR
+============================================================
+
+Bước 1. Nhấn "Xem vé của tôi" hoặc truy cập:
 
 http://localhost:5173/my-tickets
 
+
+Bước 2. Kết quả mong đợi:
+
+- Vé của Order vừa thanh toán xuất hiện.
+- Card đúng Order được highlight khi đi từ trang kết quả.
+- Có tên Event, thời gian, địa điểm.
+- Có loại vé, tên ghế và giá lúc mua.
+- Trạng thái là "Vé hợp lệ".
+
+
+Bước 3. Nhấn "Xem mã QR".
+
 Kết quả mong đợi:
-- Vé của đơn vừa thanh toán xuất hiện.
-- Hiển thị tên sự kiện, thời gian, địa điểm.
-- Hiển thị loại vé, ghế và giá lúc thanh toán.
-- Vé có trạng thái "Vé hợp lệ".
 
-Nhấn "Xem mã QR":
-- QR thật được render từ ticket.qr_code.
-- Mỗi vé/ghế có QR riêng.
-- Không chia sẻ QR cho người khác.
+- QR SVG được render từ ticket.qr_code.
+- Mỗi ghế có Ticket và QR riêng.
+- Chuỗi qr_code xuất hiện phía dưới QR.
 
 
-5. Test check-in
-------------------------------------------------------------
-1. Sao chép chuỗi qr_code hiển thị dưới QR.
-2. Đăng xuất tài khoản khách hàng.
-3. Đăng nhập tài khoản Ban tổ chức sở hữu sự kiện.
-4. Mở Dashboard BTC -> Soát vé.
-5. Dán chuỗi qr_code và nhấn soát vé.
-
-Lần thứ nhất, kết quả mong đợi:
-
-"Soát vé thành công"
-
-Ticket.is_checked_in = True
-
-Nếu dùng lại cùng QR lần thứ hai, kết quả mong đợi:
-
-"Vé này đã được soát vé trước đó!"
-
-
-PHẦN 5 - KIỂM TRA WEBHOOK LẶP
+13. KIỂM TRA CHECK-IN
 ============================================================
 
-Gửi lại đúng webhook vừa gửi, bao gồm cùng reference.
+Bước 1. Sao chép chuỗi qr_code phía dưới QR.
+
+Bước 2. Đăng xuất tài khoản Customer.
+
+Bước 3. Đăng nhập tài khoản Organizer sở hữu Event của vé.
+
+Bước 4. Mở Dashboard BTC, phần soát vé.
+
+Bước 5. Dán qr_code và nhấn soát vé.
+
+Lần đầu mong đợi:
+
+Soát vé thành công
+Ticket.is_checked_in = True
+Ticket.checked_in_at có thời gian
+
+Gửi lại cùng QR lần thứ hai mong đợi:
+
+Vé này đã được soát vé trước đó!
+
+Organizer khác Event phải nhận lỗi không có quyền soát vé.
+
+
+14. TEST WEBHOOK LẶP
+============================================================
+
+Gửi lại chính xác $testPayload cũ, gồm cùng orderCode, amount và reference:
+
+Invoke-RestMethod `
+    -Uri "http://127.0.0.1:8000/api/orders/webhook/payos/" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $testPayload
 
 Kết quả mong đợi:
 
@@ -364,141 +515,240 @@ Kết quả mong đợi:
     "status": "already_processed"
 }
 
-Database vẫn chỉ có:
-- Một Payment thành công cho giao dịch.
-- Một Ticket cho mỗi ghế.
-- Không tạo vé lặp.
-- Không gửi email lặp.
+Database vẫn phải có:
+
+- Chỉ một Payment SUCCESS.
+- Chỉ một Ticket cho mỗi ghế.
+- Không đổi QR.
+- Không gửi email lần hai.
 
 
-PHẦN 6 - CÁC LỖI THƯỜNG GẶP
+15. TEST THANH TOÁN THẤT BẠI/HỦY
 ============================================================
 
-Lỗi 1. amount không đúng tổng tiền
+Phải tạo một Order PENDING mới để test nhánh này.
+
+Payload ví dụ:
+
+{
+    "success": false,
+    "code": "01",
+    "desc": "cancelled",
+    "data": {
+        "orderCode": 26,
+        "amount": 300000,
+        "reference": "MOCK-FAILED-26-001"
+    }
+}
+
+Kết quả mong đợi:
+
+{
+    "status": "payment_failed"
+}
+
+Database:
+
+Order.status = CANCELLED hoặc EXPIRED
+Seat.status = AVAILABLE
+Payment.status = FAILED
+Ticket không được tạo
+Email thành công không được gửi
+
+Nếu gửi webhook success sau đó cho Order đã CANCELLED, hệ thống không phục
+hồi Order và trả status ignored với code invalid_payment_state.
+
+
+16. CÁC LỖI VÀ KẾT QUẢ HIỆN TẠI
+============================================================
+
 ------------------------------------------------------------
-Kết quả:
+LỖI 1 - SAI AMOUNT
+------------------------------------------------------------
+
+Response:
+
+HTTP 400
 
 {
     "error": "Số tiền thanh toán không khớp với đơn hàng.",
     "code": "amount_mismatch"
 }
 
-Cách sửa:
-- Xem lại tổng tiền trên checkout.
-- amount phải là số nguyên, ví dụ 300000.
-- Không nhập 300.000 hoặc "300000 VNĐ".
+Order vẫn PENDING, ghế vẫn LOCKED, không có Ticket.
 
 
-Lỗi 2. orderCode không tồn tại
 ------------------------------------------------------------
-Kết quả:
+LỖI 2 - ORDER KHÔNG TỒN TẠI
+------------------------------------------------------------
 
-HTTP 404
+Response hiện tại:
+
+HTTP 200
 
 {
-    "error": "Không tìm thấy đơn hàng."
+    "status": "ignored_unknown_order"
 }
 
-Cách sửa:
-- Kiểm tra ID trên trang checkout.
-- Không dùng ID sự kiện hoặc ID ghế thay cho ID đơn hàng.
+Backend trả 200 để PayOS không gửi lặp mãi một webhook hợp lệ nhưng không
+khớp dữ liệu local.
 
 
-Lỗi 3. Đơn đã hết hạn
 ------------------------------------------------------------
-Kết quả có thể là:
-
-{
-    "status": "ignored_expired"
-}
-
-hoặc:
-
-{
-    "status": "ignored",
-    "code": "order_expired"
-}
-
-Cách sửa:
-- Chọn lại ghế để tạo đơn mới.
-- Gửi webhook trong thời gian giữ ghế 10 phút.
-
-
-Lỗi 4. Dùng lại reference cho giao dịch khác
+LỖI 3 - DÙNG REFERENCE CỦA GIAO DỊCH KHÁC
 ------------------------------------------------------------
-Kết quả:
+
+Response:
+
+HTTP 400
 
 {
     "error": "Mã giao dịch PayOS đã được sử dụng cho giao dịch khác.",
     "code": "duplicate_transaction"
 }
 
-Cách sửa:
-- Tạo reference mới.
-- Dùng lệnh PowerShell có Get-Date để tự tạo reference.
+Hãy tạo reference mới.
 
 
-Lỗi 5. Trang kết quả cứ hiển thị đang xác nhận
 ------------------------------------------------------------
-Nguyên nhân thường gặp:
-- Chưa gửi webhook giả.
-- Gửi sai orderCode.
-- Backend chưa khởi động lại sau khi đổi .env.
-- Webhook trả lỗi 400 hoặc 404.
-
-Cách sửa:
-- Xem kết quả của Invoke-RestMethod/Postman.
-- Xem log terminal backend.
-- Kiểm tra PAYOS_SKIP_SIGNATURE_CHECK=True.
-
-
-Lỗi 6. Vé chưa xuất hiện
+LỖI 4 - ORDER ĐÃ HẾT HẠN
 ------------------------------------------------------------
+
+Code hiện tại cho phép webhook PAID đến trễ phục hồi Order EXPIRED nếu:
+
+- Ghế vẫn AVAILABLE và không thuộc Order nào; hoặc
+- Ghế vẫn LOCKED bởi chính Order cũ.
+
+Khi đó webhook vẫn có thể trả success, tạo vé và chuyển ghế SOLD.
+
+Nếu ghế đã được Order khác giữ/bán, webhook không giành lại ghế và trả:
+
+{
+    "status": "manual_review",
+    "code": "seat_unavailable_after_payment"
+}
+
+Để test cơ bản ổn định, hãy gửi webhook trong thời gian giữ ghế 10 phút.
+
+
+------------------------------------------------------------
+LỖI 5 - WEBHOOK BÁO CHỮ KÝ KHÔNG HỢP LỆ
+------------------------------------------------------------
+
+Nguyên nhân:
+
+- PAYOS_SKIP_SIGNATURE_CHECK vẫn là False.
+- Backend chưa restart sau khi sửa .env.
+
+Kiểm tra lại bằng lệnh settings ở Phần 4.
+
+
+------------------------------------------------------------
+LỖI 6 - TRANG KẾT QUẢ VẪN ĐANG KIỂM TRA
+------------------------------------------------------------
+
 Kiểm tra:
-- Webhook phải trả status=success.
-- Order phải có status=PAID.
-- Đang đăng nhập đúng tài khoản đã tạo đơn.
-- Nhấn nút "Làm mới" ở trang Vé của tôi.
+
+- Đã gửi webhook giả chưa?
+- Webhook có trả status=success không?
+- orderCode có đúng ID Order không?
+- amount có đúng tổng tiền không?
+- Backend có đang chạy không?
+- Có đăng nhập đúng Customer sở hữu Order không?
+
+Sau khi webhook thành công, nhấn "Kiểm tra lại" hoặc tải lại trang result.
 
 
-Lỗi 7. Không nhận được email thật
 ------------------------------------------------------------
+LỖI 7 - RESPONSE 401
+------------------------------------------------------------
+
+Webhook không cần JWT, nhưng các API hold, checkout, reconcile và my-tickets
+cần đăng nhập Customer.
+
+Hãy đăng nhập lại bằng đúng tài khoản đã tạo Order.
+
+
+------------------------------------------------------------
+LỖI 8 - VÉ KHÔNG XUẤT HIỆN
+------------------------------------------------------------
+
 Kiểm tra:
-- EMAIL_BACKEND đang là smtp.EmailBackend.
-- EMAIL_HOST_USER đúng.
-- EMAIL_HOST_PASSWORD là Gmail App Password.
-- Email tài khoản khách hàng đúng.
+
+- Order phải PAID.
+- Ticket count phải lớn hơn 0.
+- Đăng nhập đúng Customer đã mua.
+- Nhấn "Làm mới" trong trang Vé của tôi.
+- Xem lệnh kiểm tra database ở Phần 10.
+
+
+------------------------------------------------------------
+LỖI 9 - KHÔNG CÓ EMAIL
+------------------------------------------------------------
+
+Nếu console backend:
+
+- Xem terminal Django, không xem Inbox.
+
+Nếu SMTP backend:
+
+- Kiểm tra EMAIL_HOST_USER.
+- Kiểm tra Gmail App Password.
+- Kiểm tra email của Customer.
 - Kiểm tra Spam và Promotions.
-- Xem log lỗi SMTP trong terminal Django.
+- Xem log SMTP trong terminal.
 
 
-PHẦN 7 - TEST BẰNG LỆNH TỰ ĐỘNG
+17. CHẠY AUTOMATED TEST
 ============================================================
 
-Để chạy toàn bộ test backend hiện có:
+Chạy riêng test orders:
+
+cd D:\SmartEventTicketing
+.\venv\Scripts\python.exe manage.py test orders --verbosity 2
+
+Theo code hiện tại, kết quả mong đợi:
+
+Found 17 test(s)
+OK
+
+
+Chạy toàn bộ backend test:
 
 .\venv\Scripts\python.exe manage.py test
 
-Kết quả đúng:
+Theo code hiện tại, kết quả mong đợi:
 
-Ran 15 tests
+Found 21 test(s)
 OK
 
-Test bao gồm:
+
+Các test liên quan bao gồm:
+
 - Giữ ghế.
-- Hủy đơn.
-- Hết hạn đơn.
+- Giới hạn tối đa 5 ghế.
+- Chặn ghế khác Event.
+- Hủy và hết hạn Order.
 - Sai số tiền.
-- Tạo vé sau thanh toán.
-- Chống webhook lặp.
-- Không gửi email lặp.
-- Chống check-in vé chưa thanh toán.
+- Thanh toán và tạo Ticket đúng một lần.
+- Webhook lặp.
+- Email không gửi lặp.
+- Phục hồi thanh toán đến trễ khi ghế an toàn.
+- Không lấy ghế từ Order khác.
+- Reconcile PayOS.
+- Chống IDOR khi đối soát Order người khác.
+- PayOS PENDING không tạo vé.
+- Sai dữ liệu PayOS không tạo vé.
+- Vé chưa PAID không được check-in.
 
 
-PHẦN 8 - TẮT CHẾ ĐỘ GIẢ LẬP SAU KHI TEST
+18. TẮT CHẾ ĐỘ GIẢ LẬP SAU KHI TEST
 ============================================================
 
-Bước 1. Mở lại .env
+Bước 1. Mở lại:
+
+D:\SmartEventTicketing\.env
+
 
 Bước 2. Đổi:
 
@@ -508,30 +758,50 @@ thành:
 
 PAYOS_SKIP_SIGNATURE_CHECK=False
 
-Bước 3. Nếu muốn gửi email thật, đổi lại:
+
+Bước 3. Nếu muốn dùng email thật, đặt:
 
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 
-Bước 4. Khởi động lại backend:
 
+Bước 4. Tắt và chạy lại backend:
+
+cd D:\SmartEventTicketing
 .\venv\Scripts\python.exe manage.py runserver
 
-Sau bước này, hệ thống trở lại chế độ PayOS thật:
-- Tạo QR/chuyển khoản thật.
+
+Bước 5. Kiểm tra:
+
+.\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print(settings.PAYOS_SKIP_SIGNATURE_CHECK)"
+
+Kết quả phải là:
+
+False
+
+Sau đó hệ thống trở lại chế độ thật:
+
+- Tạo Payment Link/QR PayOS thật.
 - Kiểm tra chữ ký webhook thật.
+- Đối soát giao dịch thật với PayOS.
 - Không chấp nhận webhook giả không có chữ ký.
 
 
-TÓM TẮT NHANH
+19. TÓM TẮT NHANH
 ============================================================
 
-1. Đổi PAYOS_SKIP_SIGNATURE_CHECK=True trong .env.
-2. Khởi động lại backend.
-3. Tạo đơn trên giao diện và ghi lại order ID + tổng tiền.
-4. Bấm Thanh toán qua PayOS để mở trang payment/result.
-5. Dùng PowerShell/Postman POST webhook success giả.
-6. Kiểm tra trang thanh toán thành công.
-7. Kiểm tra email, vé và QR.
-8. Test check-in nếu cần.
-9. Đổi PAYOS_SKIP_SIGNATURE_CHECK=False sau khi test.
-
+1. Đặt PAYOS_SKIP_SIGNATURE_CHECK=True trong .env.
+2. Chọn console email hoặc SMTP email.
+3. Restart backend.
+4. Chạy frontend.
+5. Đăng nhập Customer.
+6. Chọn ghế và tạo Order PENDING.
+7. Ghi lại Order ID và tổng tiền.
+8. Nhấn "Thanh toán qua PayOS" để mở payment/result local.
+9. Gửi webhook success giả bằng PowerShell hoặc Postman.
+10. Kiểm tra trang báo thành công.
+11. Kiểm tra Order PAID, Payment SUCCESS, Seat SOLD và Ticket.
+12. Kiểm tra email.
+13. Mở Vé của tôi và kiểm tra QR.
+14. Gửi webhook lặp để kiểm tra idempotent.
+15. Test check-in nếu cần.
+16. Đổi PAYOS_SKIP_SIGNATURE_CHECK=False và restart backend sau khi test.

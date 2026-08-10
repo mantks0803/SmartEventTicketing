@@ -129,6 +129,8 @@ const handleLogin = async () => {
     const redirectPath = route.query.redirect
     if (redirectPath) {
       router.push(redirectPath)
+    } else if (result.role === 'ADMIN') {
+      router.push('/admin/events')
     } else if (result.role === 'ORGANIZER') {
       router.push('/organizer/dashboard')
     } else {

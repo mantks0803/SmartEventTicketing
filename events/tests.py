@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 
 from authentication.models import Customer, Organizer, User
-from events.models import Event, TicketType
+from events.models import Event, EventStatusEnum, TicketType
 from seating.models import Seat
 
 
@@ -80,6 +80,7 @@ class OrganizerEventTests(APITestCase):
         event = Event.objects.first()
 
         self.assertEqual(event.organizer, self.organizer)
+        self.assertEqual(event.status, EventStatusEnum.PENDING)
         self.assertEqual(event.seats.filter(row='VIP1').count(), 5)
         self.assertEqual(event.seats.filter(row='A1').count(), 10)
 

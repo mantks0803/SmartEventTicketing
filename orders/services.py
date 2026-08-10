@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from events.models import EventStatusEnum
 from orders.models import (
     Order,
     OrderItem,
@@ -111,6 +112,20 @@ def hold_seats(customer, seat_ids):
                 'mixed_events',
             )
 
+        event = seats[0].event
+
+        if event.status != EventStatusEnum.PUBLISHED:
+            raise OrderLifecycleError(
+                'Sự kiện chưa được mở bán.',
+                'event_not_published',
+            )
+
+        if event.start_time <= now:
+            raise OrderLifecycleError(
+                'Sự kiện đã bắt đầu hoặc đã kết thúc thời gian bán vé.',
+                'event_already_started',
+            )
+
         for seat in seats:
             if seat.status == SeatStatusEnum.SOLD:
                 raise OrderLifecycleError(f'Ghế {seat.seat_name} đã được bán.', 'seat_sold')
@@ -122,7 +137,6 @@ def hold_seats(customer, seat_ids):
                 )
 
         total_amount = sum((seat.ticket_type.price for seat in seats), Decimal('0'))
-        event = seats[0].event
 
         order = Order.objects.create(
             customer=customer,

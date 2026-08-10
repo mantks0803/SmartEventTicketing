@@ -1,12 +1,17 @@
+import os
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Event, TicketType
+from .models import Event, EventStatusEnum, TicketType
 from seating.models import Seat, SeatStatusEnum
 
 
 MAX_SEATS_PER_EVENT = 5000
+MAX_THUMBNAIL_SIZE = 5 * 1024 * 1024
+ALLOWED_THUMBNAIL_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+ALLOWED_THUMBNAIL_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
 
 
 class TicketTypeSerializer(serializers.ModelSerializer):
@@ -67,8 +72,9 @@ class EventCreateSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             'id', 'title', 'thumbnail', 'description',
-            'location', 'start_time', 'category', 'ticket_types'
+            'location', 'start_time', 'category', 'status', 'ticket_types'
         ]
+        read_only_fields = ['status']
 
     def validate_start_time(self, value):
         if value <= timezone.now():
@@ -127,6 +133,7 @@ class EventCreateSerializer(serializers.ModelSerializer):
 
         event = Event.objects.create(
             organizer=organizer,
+            status=EventStatusEnum.PENDING,
             **validated_data
         )
 
@@ -164,3 +171,28 @@ class EventCreateSerializer(serializers.ModelSerializer):
             Seat.objects.bulk_create(seats)
 
         return event
+
+
+class EventThumbnailUploadSerializer(serializers.Serializer):
+    thumbnail = serializers.FileField()
+
+    def validate_thumbnail(self, value):
+        extension = os.path.splitext(value.name)[1].lower()
+
+        if extension not in ALLOWED_THUMBNAIL_EXTENSIONS:
+            raise serializers.ValidationError(
+                'Chỉ chấp nhận ảnh JPG, JPEG, PNG hoặc WEBP.'
+            )
+
+        content_type = getattr(value, 'content_type', '')
+        if content_type not in ALLOWED_THUMBNAIL_TYPES:
+            raise serializers.ValidationError(
+                'Định dạng nội dung của file ảnh không hợp lệ.'
+            )
+
+        if value.size > MAX_THUMBNAIL_SIZE:
+            raise serializers.ValidationError(
+                'Ảnh sự kiện không được lớn hơn 5MB.'
+            )
+
+        return value

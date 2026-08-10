@@ -238,9 +238,13 @@ Thứ tự triển khai đề xuất
 
 
 Nếu chỉ chọn một việc để làm ngay tiếp theo: sửa EventCreateView, OrganizerEventListView, quyền sở hữu Event và is_active. Đây là nhóm sửa nhỏ, dễ kiểm tra, ít ảnh hưởng code cũ và giúp nền tảng an toàn trước khi làm CRUD/Dashboard.
-
+----------------------
 MAIL MAIL MAIL MAIL
 admin phai duyet event
+doanh thu cho btc,admin
+admin chuc nang....
+
+test test test test 
 ----------------
 Hoàn thiện PayOS webhook: chữ ký, số tiền, transaction ID, chống webhook lặp.
 Hoàn thiện QR và check-in: chỉ vé PAID, chống check-in hai lần.
@@ -270,5 +274,4 @@ ai_agent mới có model; serializer/view trống và URL không có endpoint. O
 
 
 mà từ giờ nếu có fix lỗi thì chỉnh sửa ít nhất (ít làm thay đổi cả 1 nguyên khối refactor lớn) có thể và code sao cho đơn giản ,nhìn giống 1 sinh viên nhất có thể nha
-
 
