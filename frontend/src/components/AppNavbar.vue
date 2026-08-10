@@ -111,6 +111,16 @@
               </li>
             </template>
 
+            <li v-if="authStore.isAdmin" class="nav-item">
+              <router-link
+                to="/admin/events"
+                class="btn btn-outline-info text-cyan btn-sm rounded-pill px-3 ms-lg-2"
+              >
+                <i class="bi bi-shield-check me-1"></i>
+                Duyệt sự kiện
+              </router-link>
+            </li>
+
             <li
               ref="dropdownContainerRef"
               class="nav-item dropdown ms-lg-2 position-relative"
@@ -138,7 +148,7 @@
                 class="dropdown-menu dropdown-menu-end rounded-xl border-0 shadow-lg py-2 position-absolute"
                 :class="{ show: isDropdownOpen }"
               >
-                <li>
+                <li v-if="!authStore.isAdmin">
                   <router-link
                     to="/profile"
                     class="dropdown-item py-2 fs-6"
@@ -182,6 +192,19 @@
                     >
                       <i class="bi bi-speedometer2 me-2 text-primary"></i>
                       Quản lý sự kiện
+                    </router-link>
+                  </li>
+                </template>
+
+                <template v-if="authStore.isAdmin">
+                  <li>
+                    <router-link
+                      to="/admin/events"
+                      class="dropdown-item py-2 fs-6"
+                      @click="closeDropdown"
+                    >
+                      <i class="bi bi-shield-check me-2 text-primary"></i>
+                      Duyệt sự kiện
                     </router-link>
                   </li>
                 </template>

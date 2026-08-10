@@ -88,6 +88,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/events',
+      name: 'admin-events',
+      component: () => import('@/views/AdminEventApprovalView.vue'),
+      meta: {
+        requiresAuth: true,
+        role: 'ADMIN'
+      }
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/ProfileView.vue'),
@@ -119,6 +128,10 @@ router.beforeEach((to) => {
     && authStore.isAuthenticated
     && authStore.userRole !== to.meta.role
   ) {
+    if (authStore.isAdmin) {
+      return { name: 'admin-events' }
+    }
+
     if (authStore.isOrganizer) {
       return { name: 'organizer-dashboard' }
     }
@@ -127,6 +140,10 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
+    if (authStore.isAdmin) {
+      return { name: 'admin-events' }
+    }
+
     if (authStore.isOrganizer) {
       return { name: 'organizer-dashboard' }
     }

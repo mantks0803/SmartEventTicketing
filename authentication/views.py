@@ -28,6 +28,11 @@ class LoginView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             refresh = RefreshToken.for_user(user)
+            role = (
+                'ADMIN'
+                if user.is_superuser or user.is_staff
+                else getattr(user, 'type', 'CUSTOMER')
+            )
             return Response({
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
@@ -37,7 +42,7 @@ class LoginView(APIView):
                     'username': user.username,
                     'name': user.name,
                     'avatar': getattr(user, 'avatar', None),
-                    'role': getattr(user, 'type', 'CUSTOMER')
+                    'role': role
                 }
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

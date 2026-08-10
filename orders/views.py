@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from authentication.permissions import IsCustomerPermission, IsOrganizerPermission
+from events.models import EventStatusEnum
 from orders.models import (
     Order,
     OrderStatusEnum,
@@ -176,7 +177,10 @@ class CreatePayOSPaymentView(APIView):
         customer = getattr(request.user, 'customer', None)
 
         try:
-            order = Order.objects.get(id=order_id, customer=customer)
+            order = Order.objects.select_related('event').get(
+                id=order_id,
+                customer=customer,
+            )
         except Order.DoesNotExist:
             return Response(
                 {'error': 'Không tìm thấy đơn hàng.'},
@@ -193,6 +197,27 @@ class CreatePayOSPaymentView(APIView):
         if order.status != OrderStatusEnum.PENDING:
             return Response(
                 {'error': 'Đơn hàng không ở trạng thái chờ thanh toán.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if (
+            not order.event
+            or order.event.status != EventStatusEnum.PUBLISHED
+        ):
+            return Response(
+                {
+                    'error': 'Sự kiện không còn được mở bán.',
+                    'code': 'event_not_published',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if order.event.start_time <= timezone.now():
+            return Response(
+                {
+                    'error': 'Sự kiện đã bắt đầu, không thể tiếp tục thanh toán.',
+                    'code': 'event_already_started',
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
