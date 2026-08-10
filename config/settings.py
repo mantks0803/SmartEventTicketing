@@ -120,14 +120,23 @@ PAYOS_SKIP_SIGNATURE_CHECK = os.getenv('PAYOS_SKIP_SIGNATURE_CHECK', 'False') ==
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+)
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
+
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+DEFAULT_FROM_EMAIL = os.getenv(
+    'DEFAULT_FROM_EMAIL',
+    EMAIL_HOST_USER or 'webmaster@localhost'
+)
 
 CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', '')
 CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '')

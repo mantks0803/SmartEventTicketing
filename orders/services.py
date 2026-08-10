@@ -186,19 +186,29 @@ def cancel_pending_order(order_id, customer=None):
 
 
 @transaction.atomic
-def confirm_order_payment(order_id, amount, transaction_id=None):
-    order = (Order.objects.select_for_update().get(id=order_id))
+def confirm_order_payment(
+    order_id,
+    amount,
+    transaction_id=None,
+    allow_expired=False,
+):
+    order = Order.objects.select_for_update().get(id=order_id)
+
     if order.status == OrderStatusEnum.PAID:
         return order, False
 
-    if order.status != OrderStatusEnum.PENDING:
+    allowed_statuses = {OrderStatusEnum.PENDING}
+    if allow_expired:
+        allowed_statuses.add(OrderStatusEnum.EXPIRED)
+
+    if order.status not in allowed_statuses:
         raise OrderLifecycleError(
             f'Không thể thanh toán đơn hàng ở trạng thái {order.status}.',
             'invalid_payment_state',
         )
 
     now = timezone.now()
-    if order.expires_at and order.expires_at <= now:
+    if order.expires_at and order.expires_at <= now and not allow_expired:
         _release_locked_seats(order)
         order.status = OrderStatusEnum.EXPIRED
         order.payos_checkout_url = None
@@ -217,24 +227,61 @@ def confirm_order_payment(order_id, amount, transaction_id=None):
     if payment_amount != order.total_amount:
         raise OrderLifecycleError('Số tiền thanh toán không khớp với đơn hàng.', 'amount_mismatch')
 
-    items = list(order.items.select_related('seat', 'ticket_type').order_by('seat_id'))
-    locked_seats = list(
+    items = list(
+        order.items.select_related('seat', 'ticket_type').order_by('seat_id')
+    )
+    seats = list(
         Seat.objects.select_for_update()
-        .filter(
-            locked_by_order=order,
-            status=SeatStatusEnum.LOCKED,
-            id__in=[item.seat_id for item in items],
-        )
+        .filter(id__in=[item.seat_id for item in items])
         .order_by('id')
     )
 
-    if not items or len(locked_seats) != len(items):
+    if not items or len(seats) != len(items):
         raise OrderLifecycleError(
-            'Các ghế của đơn hàng không còn được giữ đầy đủ.',
+            'Không tìm thấy đầy đủ ghế của đơn hàng.',
             'seat_lock_lost',
         )
 
-    Seat.objects.filter(id__in=[seat.id for seat in locked_seats]).update(
+    if allow_expired:
+        for seat in seats:
+            is_available = (
+                seat.status == SeatStatusEnum.AVAILABLE
+                and seat.locked_by_order_id is None
+            )
+            is_locked_by_order = (
+                seat.status == SeatStatusEnum.LOCKED
+                and seat.locked_by_order_id == order.id
+            )
+
+            if not is_available and not is_locked_by_order:
+                raise OrderLifecycleError(
+                    f'Ghế {seat.seat_name} không còn an toàn để phát hành vé.',
+                    'seat_unavailable_after_payment',
+                )
+    else:
+        for seat in seats:
+            if (
+                seat.status != SeatStatusEnum.LOCKED
+                or seat.locked_by_order_id != order.id
+            ):
+                raise OrderLifecycleError(
+                    'Các ghế của đơn hàng không còn được giữ đầy đủ.',
+                    'seat_lock_lost',
+                )
+
+    if order.tickets.exists():
+        raise OrderLifecycleError(
+            'Đơn hàng đã có dữ liệu vé không hợp lệ.',
+            'tickets_already_exist',
+        )
+
+    if Ticket.objects.filter(seat_id__in=[seat.id for seat in seats]).exists():
+        raise OrderLifecycleError(
+            'Một ghế của đơn hàng đã có vé được phát hành.',
+            'seat_unavailable_after_payment',
+        )
+
+    Seat.objects.filter(id__in=[seat.id for seat in seats]).update(
         status=SeatStatusEnum.SOLD,
         locked_until=None,
         locked_by_order=None,
