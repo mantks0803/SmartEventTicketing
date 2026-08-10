@@ -1,6 +1,9 @@
 from datetime import timedelta
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -137,6 +140,64 @@ class OrderLifecycleTests(TestCase):
         self.assertEqual(self.seats[0].status, SeatStatusEnum.AVAILABLE)
         self.assertIsNone(self.seats[0].locked_by_order_id)
 
+    def test_verified_payment_can_restore_expired_order_when_seat_is_available(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        past = timezone.now() - timedelta(seconds=1)
+        order.expires_at = past
+        order.save(update_fields=['expires_at'])
+        Seat.objects.filter(id=self.seats[0].id).update(locked_until=past)
+        expire_stale_orders()
+
+        paid_order, processed = confirm_order_payment(
+            order.id,
+            amount=100000,
+            transaction_id='PAYOS-LATE-001',
+            allow_expired=True,
+        )
+
+        paid_order.refresh_from_db()
+        self.seats[0].refresh_from_db()
+        self.assertTrue(processed)
+        self.assertEqual(paid_order.status, OrderStatusEnum.PAID)
+        self.assertEqual(self.seats[0].status, SeatStatusEnum.SOLD)
+        self.assertEqual(paid_order.tickets.count(), 1)
+        self.assertEqual(paid_order.payments.count(), 1)
+
+    def test_verified_late_payment_does_not_take_seat_from_another_order(self):
+        old_order = hold_seats(self.customer, [self.seats[0].id])
+        past = timezone.now() - timedelta(seconds=1)
+        old_order.expires_at = past
+        old_order.save(update_fields=['expires_at'])
+        Seat.objects.filter(id=self.seats[0].id).update(locked_until=past)
+        expire_stale_orders()
+
+        other_user = User.objects.create_user(
+            username='other-customer',
+            email='other@example.com',
+            phone_number='0900000003',
+            name='Other Customer',
+            type='CUSTOMER',
+            password='123456',
+        )
+        other_customer = Customer.objects.create(user=other_user)
+        new_order = hold_seats(other_customer, [self.seats[0].id])
+
+        with self.assertRaises(OrderLifecycleError) as context:
+            confirm_order_payment(
+                old_order.id,
+                amount=100000,
+                transaction_id='PAYOS-LATE-002',
+                allow_expired=True,
+            )
+
+        old_order.refresh_from_db()
+        self.seats[0].refresh_from_db()
+        self.assertEqual(context.exception.code, 'seat_unavailable_after_payment')
+        self.assertEqual(old_order.status, OrderStatusEnum.EXPIRED)
+        self.assertEqual(self.seats[0].status, SeatStatusEnum.LOCKED)
+        self.assertEqual(self.seats[0].locked_by_order_id, new_order.id)
+        self.assertEqual(old_order.tickets.count(), 0)
+
     def test_successful_payment_sells_seats_and_issues_tickets_once(self):
         order = hold_seats(self.customer, [self.seats[0].id, self.seats[1].id])
 
@@ -187,6 +248,11 @@ class OrderLifecycleTests(TestCase):
         self.assertEqual(self.seats[0].status, SeatStatusEnum.LOCKED)
         self.assertEqual(Ticket.objects.count(), 0)
 
+    @override_settings(
+        PAYOS_SKIP_SIGNATURE_CHECK=True,
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='SmartTicket <noreply@smartticket.test>',
+    )
     def test_webhook_is_idempotent(self):
         order = hold_seats(self.customer, [self.seats[0].id])
         payload = {
@@ -200,8 +266,19 @@ class OrderLifecycleTests(TestCase):
         }
         client = APIClient()
 
-        first_response = client.post('/api/orders/webhook/payos/', payload, format='json')
-        second_response = client.post('/api/orders/webhook/payos/', payload, format='json')
+        with self.captureOnCommitCallbacks(execute=True):
+            first_response = client.post(
+                '/api/orders/webhook/payos/',
+                payload,
+                format='json',
+            )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            second_response = client.post(
+                '/api/orders/webhook/payos/',
+                payload,
+                format='json',
+            )
 
         order.refresh_from_db()
         self.assertEqual(first_response.status_code, 200)
@@ -211,7 +288,11 @@ class OrderLifecycleTests(TestCase):
         self.assertEqual(order.status, OrderStatusEnum.PAID)
         self.assertEqual(order.tickets.count(), 1)
         self.assertEqual(order.payments.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['customer@example.com'])
+        self.assertIn(f'#{order.id}', mail.outbox[0].subject)
 
+    @override_settings(PAYOS_SKIP_SIGNATURE_CHECK=True)
     def test_success_webhook_cannot_revive_cancelled_order(self):
         order = hold_seats(self.customer, [self.seats[0].id])
         cancel_pending_order(order.id, customer=self.customer)
@@ -237,6 +318,133 @@ class OrderLifecycleTests(TestCase):
         self.assertEqual(response.data['status'], 'ignored')
         self.assertEqual(order.status, OrderStatusEnum.CANCELLED)
         self.assertEqual(self.seats[0].status, SeatStatusEnum.AVAILABLE)
+        self.assertEqual(order.tickets.count(), 0)
+
+    @override_settings(
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        DEFAULT_FROM_EMAIL='SmartTicket <noreply@smartticket.test>',
+    )
+    def test_customer_can_reconcile_paid_order_directly_with_payos(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        payment_info = SimpleNamespace(
+            status='PAID',
+            orderCode=order.id,
+            amount=100000,
+            amountPaid=100000,
+            amountRemaining=0,
+            id='payment-link-001',
+            transactions=[SimpleNamespace(reference='PAYOS-RECONCILE-001')],
+        )
+        client = APIClient()
+        client.force_authenticate(self.customer.user)
+
+        with patch('orders.views.payos') as payos_mock:
+            payos_mock.getPaymentLinkInformation.return_value = payment_info
+            with self.captureOnCommitCallbacks(execute=True):
+                response = client.post(
+                    f'/api/orders/{order.id}/reconcile-payos/',
+                    {},
+                    format='json',
+                )
+                second_response = client.post(
+                    f'/api/orders/{order.id}/reconcile-payos/',
+                    {},
+                    format='json',
+                )
+
+        order.refresh_from_db()
+        self.seats[0].refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['status'], 'success')
+        self.assertEqual(response.data['payos_status'], 'PAID')
+        self.assertEqual(response.data['order']['status'], OrderStatusEnum.PAID)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(second_response.data['status'], 'success')
+        self.assertEqual(order.status, OrderStatusEnum.PAID)
+        self.assertEqual(self.seats[0].status, SeatStatusEnum.SOLD)
+        self.assertEqual(order.tickets.count(), 1)
+        self.assertEqual(order.payments.count(), 1)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_pending_payos_reconciliation_does_not_issue_ticket(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        payment_info = SimpleNamespace(status='PENDING')
+        client = APIClient()
+        client.force_authenticate(self.customer.user)
+
+        with patch('orders.views.payos') as payos_mock:
+            payos_mock.getPaymentLinkInformation.return_value = payment_info
+            response = client.post(
+                f'/api/orders/{order.id}/reconcile-payos/',
+                {},
+                format='json',
+            )
+
+        order.refresh_from_db()
+        self.seats[0].refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['status'], 'waiting')
+        self.assertEqual(response.data['payos_status'], 'PENDING')
+        self.assertEqual(order.status, OrderStatusEnum.PENDING)
+        self.assertEqual(self.seats[0].status, SeatStatusEnum.LOCKED)
+        self.assertEqual(order.tickets.count(), 0)
+        self.assertEqual(order.payments.count(), 0)
+
+    def test_reconciliation_rejects_mismatched_payos_order_data(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        payment_info = SimpleNamespace(
+            status='PAID',
+            orderCode=order.id + 999,
+            amount=100000,
+            amountPaid=100000,
+            amountRemaining=0,
+            transactions=[SimpleNamespace(reference='PAYOS-WRONG-ORDER')],
+        )
+        client = APIClient()
+        client.force_authenticate(self.customer.user)
+
+        with patch('orders.views.payos') as payos_mock:
+            payos_mock.getPaymentLinkInformation.return_value = payment_info
+            response = client.post(
+                f'/api/orders/{order.id}/reconcile-payos/',
+                {},
+                format='json',
+            )
+
+        order.refresh_from_db()
+        self.seats[0].refresh_from_db()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data['code'], 'payos_data_mismatch')
+        self.assertEqual(order.status, OrderStatusEnum.PENDING)
+        self.assertEqual(self.seats[0].status, SeatStatusEnum.LOCKED)
+        self.assertEqual(order.tickets.count(), 0)
+        self.assertEqual(order.payments.count(), 0)
+
+    def test_customer_cannot_reconcile_another_customers_order(self):
+        order = hold_seats(self.customer, [self.seats[0].id])
+        other_user = User.objects.create_user(
+            username='idor-customer',
+            email='idor@example.com',
+            phone_number='0900000004',
+            name='IDOR Customer',
+            type='CUSTOMER',
+            password='123456',
+        )
+        Customer.objects.create(user=other_user)
+        client = APIClient()
+        client.force_authenticate(other_user)
+
+        with patch('orders.views.payos') as payos_mock:
+            response = client.post(
+                f'/api/orders/{order.id}/reconcile-payos/',
+                {},
+                format='json',
+            )
+
+        order.refresh_from_db()
+        self.assertEqual(response.status_code, 404)
+        payos_mock.getPaymentLinkInformation.assert_not_called()
+        self.assertEqual(order.status, OrderStatusEnum.PENDING)
         self.assertEqual(order.tickets.count(), 0)
 
     def test_pending_ticket_cannot_be_checked_in(self):

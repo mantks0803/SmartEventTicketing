@@ -2,7 +2,7 @@ from django.urls import path
 from orders.views import (
     HoldSeatsView, CustomerOrderListView, OrderDetailView, 
     CancelOrderView, CreatePayOSPaymentView, PayOSWebhookView,
-    CustomerTicketListView, CheckInView
+    CustomerTicketListView, CheckInView, ReconcilePayOSPaymentView
 )
 
 urlpatterns = [
@@ -12,6 +12,11 @@ urlpatterns = [
     path('check-in/', CheckInView.as_view(), name='check_in_ticket'),
     path('<int:pk>/', OrderDetailView.as_view(), name='order_detail'),
     path('<int:pk>/cancel/', CancelOrderView.as_view(), name='cancel_order'),
+    path(
+        '<int:order_id>/reconcile-payos/',
+        ReconcilePayOSPaymentView.as_view(),
+        name='reconcile_payos_payment',
+    ),
     
     path('<int:order_id>/payos-link/', CreatePayOSPaymentView.as_view(), name='create_payos_link'),
     path('webhook/payos/', PayOSWebhookView.as_view(), name='payos_webhook'),

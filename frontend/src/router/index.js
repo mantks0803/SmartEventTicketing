@@ -6,6 +6,7 @@ import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import EventDetailView from '@/views/EventDetailView.vue'
 import CheckoutView from '@/views/CheckoutView.vue'
+import PaymentResultView from '@/views/PaymentResultView.vue'
 import MyTicketsView from '@/views/MyTicketsView.vue'
 import OrganizerDashboardView from '@/views/OrganizerDashboardView.vue'
 import OrganizerEventCreateView from '@/views/OrganizerEventCreateView.vue'
@@ -29,6 +30,15 @@ const router = createRouter({
       path: '/checkout/:orderId',
       name: 'checkout',
       component: CheckoutView,
+      meta: {
+        requiresAuth: true,
+        role: 'CUSTOMER'
+      }
+    },
+    {
+      path: '/payment/result',
+      name: 'payment-result',
+      component: PaymentResultView,
       meta: {
         requiresAuth: true,
         role: 'CUSTOMER'

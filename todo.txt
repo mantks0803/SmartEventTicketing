@@ -1,23 +1,4 @@
-1. Những phần hiện đã tương đối ổn
-Không cần sửa lớn lại các phần này:
-Giữ ghế bằng transaction và select_for_update().
-Giới hạn tối đa 5 ghế.
-Không cho một đơn chứa ghế của nhiều sự kiện.
-Hủy/hết hạn thì trả ghế.
-Chỉ tạo Ticket khi Order chuyển thành PAID.
-Kiểm tra số tiền webhook.
-Lưu transaction ID.
-Chống webhook lặp cơ bản.
-Không cho webhook thanh toán lại đơn đã hủy.
-Check-in chỉ với đơn PAID.
-Không check-in hai lần.
-Organizer chỉ check-in vé thuộc sự kiện của mình.
-Countdown frontend tính theo expires_at.
-Có 11 test nghiệp vụ Order hiện tại.
-Các phần này chỉ cần bổ sung test và trường hợp biên, không cần refactor nguyên khối.
-A. Các lỗi nên sửa trước
-2. Sửa permission sự kiện
-Đây nên là việc tiếp theo.
+
 Cần bảo đảm:
 Chỉ ORGANIZER được tạo sự kiện.
 Customer gọi API tạo sự kiện phải nhận 403, không phải lỗi 500.
@@ -259,7 +240,7 @@ Thứ tự triển khai đề xuất
 Nếu chỉ chọn một việc để làm ngay tiếp theo: sửa EventCreateView, OrganizerEventListView, quyền sở hữu Event và is_active. Đây là nhóm sửa nhỏ, dễ kiểm tra, ít ảnh hưởng code cũ và giúp nền tảng an toàn trước khi làm CRUD/Dashboard.
 
 MAIL MAIL MAIL MAIL
-
+admin phai duyet event
 ----------------
 Hoàn thiện PayOS webhook: chữ ký, số tiền, transaction ID, chống webhook lặp.
 Hoàn thiện QR và check-in: chỉ vé PAID, chống check-in hai lần.
