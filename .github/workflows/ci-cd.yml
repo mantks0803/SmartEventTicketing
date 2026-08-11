@@ -1,0 +1,97 @@
+name: SmartTicket CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: smartticket_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: ci-secret-key-for-testing
+      DEBUG: "False"
+      DB_NAME: smartticket_ci
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
+      DEFAULT_FROM_EMAIL: noreply@smartticket.test
+      FRONTEND_URL: http://localhost:5173
+
+    steps:
+      - name: Lấy source code
+        uses: actions/checkout@v6
+
+      - name: Cài Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Cài thư viện backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Kiểm tra cấu hình Django
+        run: python manage.py check
+
+      - name: Kiểm tra migration còn thiếu
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Chạy migration trên database CI
+        run: python manage.py migrate --noinput
+
+      - name: Chạy toàn bộ backend test
+        run: python manage.py test -v 2
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Lấy source code
+        uses: actions/checkout@v6
+
+      - name: Cài Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.18.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cài thư viện frontend
+        run: npm ci
+
+      - name: Build Vue 3
+        run: npm run build
