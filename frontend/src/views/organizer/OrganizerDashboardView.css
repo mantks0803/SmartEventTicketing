@@ -1,0 +1,326 @@
+.organizer-page {
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(37, 99, 235, 0.1),
+      transparent 30%
+    ),
+    #F8FAFC;
+}
+
+.welcome-card {
+  min-height: 180px;
+  padding: 34px;
+  border-radius: 24px;
+  background:
+    linear-gradient(
+      120deg,
+      rgba(15, 23, 42, 0.98),
+      rgba(30, 64, 175, 0.94)
+    );
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.welcome-label {
+  color: #93C5FD;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+
+.create-event-btn {
+  flex-shrink: 0;
+  border: none;
+  background: #FF6B35;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.35);
+}
+
+.create-event-btn:hover {
+  background: #E85A24;
+  color: #FFFFFF;
+  transform: translateY(-2px);
+}
+
+.sidebar-card,
+.content-card {
+  padding: 22px;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  background: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.sidebar-card {
+  position: sticky;
+  top: 100px;
+}
+
+.organizer-info {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.organizer-avatar {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #DBEAFE;
+  color: #2563EB;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-title {
+  margin-bottom: 8px;
+  color: #94A3B8;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.sidebar-link {
+  width: 100%;
+  padding: 11px 13px;
+  margin-bottom: 6px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-link:hover {
+  background: #F1F5F9;
+  color: #2563EB;
+}
+
+.sidebar-link.active {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.sidebar-count {
+  padding: 2px 8px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  font-size: 0.72rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stat-card {
+  min-height: 112px;
+  padding: 20px;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  background: #FFFFFF;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-blue {
+  background: #DBEAFE;
+  color: #2563EB;
+}
+
+.icon-green {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.icon-orange {
+  background: #FEF3C7;
+  color: #D97706;
+}
+
+.icon-purple {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+/* EventList là component con nên dùng :deep để scoped CSS áp dụng đúng. */
+:deep(.event-list) {
+  display: grid;
+  gap: 12px;
+}
+
+:deep(.event-row) {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  background: #FFFFFF;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+:deep(.event-row:hover) {
+  border-color: #BFDBFE;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+  transform: translateY(-1px);
+}
+
+:deep(.event-thumbnail) {
+  width: 124px;
+  height: 82px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #E2E8F0;
+}
+
+:deep(.event-main) {
+  min-width: 0;
+  flex: 1;
+}
+
+:deep(.event-meta) {
+  margin-top: 7px;
+  color: #64748B;
+  font-size: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+:deep(.event-status) {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+:deep(.status-published) {
+  background: #D1FAE5;
+  color: #047857;
+}
+
+:deep(.status-pending) {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+:deep(.status-cancelled) {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+:deep(.empty-state),
+.checkin-box {
+  padding: 50px 20px;
+  text-align: center;
+}
+
+:deep(.empty-icon),
+.checkin-icon {
+  color: #2563EB;
+  font-size: 3rem;
+}
+
+.checkin-icon {
+  width: 82px;
+  height: 82px;
+  margin: 0 auto;
+  border-radius: 24px;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text-slate-900 {
+  color: #0F172A;
+}
+
+@media (max-width: 991px) {
+  .welcome-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sidebar-card {
+    position: static;
+  }
+}
+
+@media (max-width: 576px) {
+  .welcome-card {
+    padding: 24px;
+    border-radius: 18px;
+  }
+
+  .create-event-btn {
+    width: 100%;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  :deep(.event-row) {
+    padding: 10px;
+    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  :deep(.event-thumbnail) {
+    width: 92px;
+    height: 70px;
+    border-radius: 10px;
+  }
+
+  :deep(.event-meta) {
+    gap: 6px 12px;
+  }
+
+  :deep(.event-row > .btn) {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+}
+

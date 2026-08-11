@@ -5,8 +5,8 @@
 | Nội dung | Giá trị |
 |---|---|
 | Ngày kiểm thử | 11/08/2026 |
-| Nhánh Git | `testing-update` |
-| Commit gốc trước thay đổi | `3a32b97` |
+| Nhánh Git | `folder-refactor` |
+| Commit trước khi tái cấu trúc | `7534b34` |
 | Môi trường | Máy local Windows |
 | Backend | Python 3.14.6, Django 6.0.7 |
 | Frontend | Node.js 24.14.1, Vue 3, Vite 8.2.0 |
@@ -32,10 +32,11 @@ Tỷ lệ pass backend: **100%**.
 ## 3. Lệnh đã chạy
 
 ```powershell
-.\venv\Scripts\python.exe manage.py check
-.\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
-.\venv\Scripts\python.exe manage.py test -v 1
-cd frontend
+cd backend
+..\venv\Scripts\python.exe manage.py check
+..\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+..\venv\Scripts\python.exe manage.py test -v 1
+cd ..\frontend
 npm.cmd run build
 ```
 
@@ -46,7 +47,7 @@ npm.cmd run build
 ```text
 Found 70 test(s).
 System check identified no issues (0 silenced).
-Ran 70 tests in 42.283s
+Ran 70 tests in 61.810s
 OK
 ```
 
@@ -55,7 +56,7 @@ OK
 ```text
 vite v8.2.0 building client environment for production...
 175 modules transformed.
-build completed successfully in 1.74s
+build completed successfully in 0.838s
 ```
 
 ### Workflow YAML
@@ -78,6 +79,7 @@ Jobs: backend, frontend
 - Tạo link PayOS test, kiểm tra chữ ký webhook, chống webhook lặp và đối soát giao dịch.
 - Phát hành vé, danh sách vé của đúng Customer và không trả vé PENDING.
 - Check-in QR một lần và quyền soát vé của đúng Organizer.
+- Giữ nguyên template/script của 16 SFC và tách nguyên vẹn CSS scoped ra file riêng.
 
 ## 6. Dịch vụ ngoài trong test
 
@@ -96,7 +98,7 @@ Jobs: backend, frontend
 
 ## 8. Ghi chú và giới hạn
 
-- Không có file model, serializer, view, route hoặc Vue component nào bị thay đổi trong lần tổ chức test này.
+- Backend được chuyển nguyên khối vào `backend/`; logic model, serializer, view, API, route và Vue component không bị thay đổi.
 - Test race condition cần PostgreSQL; không nên thay bằng SQLite.
 - Luồng đăng nhập hiện khóa tài khoản bằng field `is_active`. Field `status` trong model chưa phải điều kiện khóa đăng nhập.
 - Kiểm thử trình duyệt, email SMTP thật và thanh toán ngân hàng thật vẫn là kiểm thử thủ công ngoài phạm vi CI.

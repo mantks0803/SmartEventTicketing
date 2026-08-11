@@ -1,0 +1,19 @@
+.text-slate-900 {
+  color: #0F172A;
+}
+
+.bg-blue-subtle {
+  background-color: #EFF6FF;
+}
+
+.nav-tabs .nav-link {
+  color: #64748B;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link.active {
+  color: #2563EB;
+  border-bottom: 2px solid #2563EB;
+  background: transparent;
+}

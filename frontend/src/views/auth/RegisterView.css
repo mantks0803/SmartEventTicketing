@@ -1,0 +1,29 @@
+.auth-container {
+  min-height: calc(100vh - 160px);
+}
+
+.auth-card {
+  max-width: 520px;
+}
+
+.icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-role {
+  border: none;
+  transition: all 0.25s ease;
+}
+
+.btn-eye {
+  cursor: pointer;
+}
+
+.fs-8 {
+  font-size: 0.78rem;
+}

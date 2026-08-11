@@ -1,15 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-import HomeView from '@/views/HomeView.vue'
-import LoginView from '@/views/LoginView.vue'
-import RegisterView from '@/views/RegisterView.vue'
-import EventDetailView from '@/views/EventDetailView.vue'
-import CheckoutView from '@/views/CheckoutView.vue'
-import PaymentResultView from '@/views/PaymentResultView.vue'
-import MyTicketsView from '@/views/MyTicketsView.vue'
-import OrganizerDashboardView from '@/views/OrganizerDashboardView.vue'
-import OrganizerEventCreateView from '@/views/OrganizerEventCreateView.vue'
+import HomeView from '@/views/public/HomeView.vue'
+import LoginView from '@/views/auth/LoginView.vue'
+import RegisterView from '@/views/auth/RegisterView.vue'
+import EventDetailView from '@/views/public/EventDetailView.vue'
+import CheckoutView from '@/views/customer/CheckoutView.vue'
+import PaymentResultView from '@/views/customer/PaymentResultView.vue'
+import MyTicketsView from '@/views/customer/MyTicketsView.vue'
+import OrganizerDashboardView from '@/views/organizer/OrganizerDashboardView.vue'
+import OrganizerEventCreateView from '@/views/organizer/OrganizerEventCreateView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -90,7 +90,7 @@ const router = createRouter({
     {
       path: '/admin/events',
       name: 'admin-events',
-      component: () => import('@/views/AdminEventApprovalView.vue'),
+      component: () => import('@/views/admin/AdminEventApprovalView.vue'),
       meta: {
         requiresAuth: true,
         role: 'ADMIN'
@@ -99,7 +99,7 @@ const router = createRouter({
     {
       path: '/profile',
       name: 'profile',
-      component: () => import('@/views/ProfileView.vue'),
+      component: () => import('@/views/account/ProfileView.vue'),
       meta: {
         requiresAuth: true
       }

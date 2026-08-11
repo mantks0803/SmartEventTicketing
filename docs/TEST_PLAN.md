@@ -25,7 +25,7 @@ Kế hoạch này kiểm tra các luồng quan trọng nhất của hệ thống
 ## 4. Điều kiện đạt
 
 - Toàn bộ test backend phải pass.
-- `python manage.py check` không báo lỗi.
+- Chạy trong thư mục `backend/`, lệnh `python manage.py check` không báo lỗi.
 - Không có migration chưa tạo.
 - `npm run build` hoàn tất mà không có lỗi biên dịch.
 - Race condition phải có đúng một đơn giữ ghế thành công.
@@ -73,33 +73,36 @@ Kế hoạch này kiểm tra các luồng quan trọng nhất của hệ thống
 
 | Nhóm | Thư mục/file |
 |---|---|
-| Đăng ký và đăng nhập | `authentication/tests/` |
-| Sự kiện công khai, Organizer, thumbnail và Admin | `events/tests/` |
-| Sơ đồ ghế và race condition | `seating/tests/` |
-| Giữ ghế, PayOS, thanh toán, vé và check-in | `orders/tests/` |
+| Đăng ký và đăng nhập | `backend/authentication/tests/` |
+| Sự kiện công khai, Organizer, thumbnail và Admin | `backend/events/tests/` |
+| Sơ đồ ghế và race condition | `backend/seating/tests/` |
+| Giữ ghế, PayOS, thanh toán, vé và check-in | `backend/orders/tests/` |
 
 ## 7. Cách chạy ở máy cá nhân
 
 Chạy toàn bộ backend test:
 
 ```powershell
-.\venv\Scripts\python.exe manage.py test -v 2
+cd backend
+..\venv\Scripts\python.exe manage.py test -v 2
 ```
 
 Chạy riêng từng app:
 
 ```powershell
-.\venv\Scripts\python.exe manage.py test authentication.tests -v 2
-.\venv\Scripts\python.exe manage.py test events.tests -v 2
-.\venv\Scripts\python.exe manage.py test seating.tests -v 2
-.\venv\Scripts\python.exe manage.py test orders.tests -v 2
+cd backend
+..\venv\Scripts\python.exe manage.py test authentication.tests -v 2
+..\venv\Scripts\python.exe manage.py test events.tests -v 2
+..\venv\Scripts\python.exe manage.py test seating.tests -v 2
+..\venv\Scripts\python.exe manage.py test orders.tests -v 2
 ```
 
 Chạy một file hoặc một test cụ thể:
 
 ```powershell
-.\venv\Scripts\python.exe manage.py test seating.tests.test_race_condition -v 2
-.\venv\Scripts\python.exe manage.py test orders.tests.test_check_in.CheckInTests.test_ticket_cannot_be_checked_in_twice -v 2
+cd backend
+..\venv\Scripts\python.exe manage.py test seating.tests.test_race_condition -v 2
+..\venv\Scripts\python.exe manage.py test orders.tests.test_check_in.CheckInTests.test_ticket_cannot_be_checked_in_twice -v 2
 ```
 
 Kiểm tra frontend:
