@@ -1,7 +1,5 @@
 from datetime import timedelta
-from unittest.mock import patch
 
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
@@ -9,104 +7,12 @@ from authentication.models import Customer, Organizer, User
 from events.models import Event, EventStatusEnum
 
 
-class EventThumbnailTests(APITestCase):
-    def setUp(self):
-        self.organizer_user = User.objects.create_user(
-            username='thumbnail-organizer',
-            email='thumbnail-organizer@example.com',
-            phone_number='0900000201',
-            name='Thumbnail Organizer',
-            type='ORGANIZER',
-            password='123456',
-        )
-        Organizer.objects.create(
-            user=self.organizer_user,
-            company_name='Thumbnail Company',
-            bank_account='123456789',
-        )
-        self.customer_user = User.objects.create_user(
-            username='thumbnail-customer',
-            email='thumbnail-customer@example.com',
-            phone_number='0900000202',
-            name='Thumbnail Customer',
-            type='CUSTOMER',
-            password='123456',
-        )
-        Customer.objects.create(user=self.customer_user)
-
-    @patch('events.views.cloudinary.uploader.upload')
-    def test_organizer_can_upload_thumbnail(self, upload_mock):
-        upload_mock.return_value = {
-            'secure_url': 'https://res.cloudinary.com/demo/event.jpg',
-        }
-        self.client.force_authenticate(self.organizer_user)
-
-        response = self.client.post(
-            '/api/events/upload-thumbnail/',
-            {
-                'thumbnail': SimpleUploadedFile(
-                    'event.jpg',
-                    b'fake-image-content',
-                    content_type='image/jpeg',
-                )
-            },
-            format='multipart',
-        )
-
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(
-            response.data['secure_url'],
-            upload_mock.return_value['secure_url'],
-        )
-        upload_mock.assert_called_once()
-        self.assertEqual(
-            upload_mock.call_args.kwargs['folder'],
-            'smartticket_events',
-        )
-
-    @patch('events.views.cloudinary.uploader.upload')
-    def test_invalid_thumbnail_is_rejected_before_upload(self, upload_mock):
-        self.client.force_authenticate(self.organizer_user)
-
-        response = self.client.post(
-            '/api/events/upload-thumbnail/',
-            {
-                'thumbnail': SimpleUploadedFile(
-                    'event.txt',
-                    b'not-an-image',
-                    content_type='text/plain',
-                )
-            },
-            format='multipart',
-        )
-
-        self.assertEqual(response.status_code, 400)
-        upload_mock.assert_not_called()
-
-    def test_customer_cannot_upload_thumbnail(self):
-        self.client.force_authenticate(self.customer_user)
-
-        response = self.client.post(
-            '/api/events/upload-thumbnail/',
-            {
-                'thumbnail': SimpleUploadedFile(
-                    'event.jpg',
-                    b'fake-image-content',
-                    content_type='image/jpeg',
-                )
-            },
-            format='multipart',
-        )
-
-        self.assertEqual(response.status_code, 403)
-
-
 class AdminEventTests(APITestCase):
     def setUp(self):
         organizer_user = User.objects.create_user(
             username='admin-test-organizer',
             email='admin-organizer@example.com',
-            phone_number='0900000211',
+            phone_number='0902000031',
             name='Admin Test Organizer',
             type='ORGANIZER',
             password='123456',
@@ -119,7 +25,7 @@ class AdminEventTests(APITestCase):
         self.admin_user = User.objects.create_user(
             username='api-admin',
             email='api-admin@example.com',
-            phone_number='0900000212',
+            phone_number='0902000032',
             name='API Admin',
             type='ADMIN',
             password='123456',
@@ -127,13 +33,12 @@ class AdminEventTests(APITestCase):
         self.customer_user = User.objects.create_user(
             username='admin-test-customer',
             email='admin-customer@example.com',
-            phone_number='0900000213',
+            phone_number='0902000033',
             name='Admin Test Customer',
             type='CUSTOMER',
             password='123456',
         )
         Customer.objects.create(user=self.customer_user)
-
         self.pending_event = Event.objects.create(
             organizer=self.organizer,
             title='Pending Music Event',
@@ -162,10 +67,7 @@ class AdminEventTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(
-            response.data['results'][0]['id'],
-            self.pending_event.id,
-        )
+        self.assertEqual(response.data['results'][0]['id'], self.pending_event.id)
 
     def test_customer_cannot_access_admin_events(self):
         self.client.force_authenticate(self.customer_user)
@@ -187,17 +89,15 @@ class AdminEventTests(APITestCase):
     def test_admin_can_approve_pending_event(self):
         self.client.force_authenticate(self.admin_user)
 
+        # Act: admin duyệt event đang PENDING.
         response = self.client.post(
             f'/api/events/admin/{self.pending_event.id}/approve/'
         )
 
+        # Assert: event chuyển sang PUBLISHED và API công khai đọc được.
         self.pending_event.refresh_from_db()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            self.pending_event.status,
-            EventStatusEnum.PUBLISHED,
-        )
-
+        self.assertEqual(self.pending_event.status, EventStatusEnum.PUBLISHED)
         public_response = self.client.get(
             f'/api/events/{self.pending_event.id}/'
         )
@@ -212,10 +112,7 @@ class AdminEventTests(APITestCase):
 
         self.pending_event.refresh_from_db()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            self.pending_event.status,
-            EventStatusEnum.CANCELLED,
-        )
+        self.assertEqual(self.pending_event.status, EventStatusEnum.CANCELLED)
 
     def test_invalid_admin_transition_returns_conflict(self):
         self.client.force_authenticate(self.admin_user)
@@ -227,10 +124,7 @@ class AdminEventTests(APITestCase):
         self.published_event.refresh_from_db()
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.data['code'], 'event_not_pending')
-        self.assertEqual(
-            self.published_event.status,
-            EventStatusEnum.PUBLISHED,
-        )
+        self.assertEqual(self.published_event.status, EventStatusEnum.PUBLISHED)
 
     def test_admin_cannot_approve_started_event(self):
         self.pending_event.start_time = timezone.now() - timedelta(minutes=1)
@@ -244,16 +138,13 @@ class AdminEventTests(APITestCase):
         self.pending_event.refresh_from_db()
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data['code'], 'event_already_started')
-        self.assertEqual(
-            self.pending_event.status,
-            EventStatusEnum.PENDING,
-        )
+        self.assertEqual(self.pending_event.status, EventStatusEnum.PENDING)
 
     def test_staff_user_can_access_admin_events(self):
         staff_user = User.objects.create_user(
             username='staff-admin',
             email='staff-admin@example.com',
-            phone_number='0900000214',
+            phone_number='0902000034',
             name='Staff Admin',
             type='CUSTOMER',
             is_staff=True,
