@@ -40,11 +40,4 @@ defineProps({
 defineEmits(['page-change'])
 </script>
 
-<style scoped>
-.btn-white {
-  background-color: #FFFFFF;
-}
-.border-slate {
-  border: 1px solid #E2E8F0;
-}
-</style>
+<style scoped src="./PaginationControls.css"></style>

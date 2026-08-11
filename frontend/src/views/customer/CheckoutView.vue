@@ -167,12 +167,4 @@ const handlePayOS = async () => {
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
 </script>
 
-<style scoped>
-.fw-extrabold {
-  font-weight: 800;
-}
-
-.text-slate-900 {
-  color: #0F172A;
-}
-</style>
+<style scoped src="./CheckoutView.css"></style>

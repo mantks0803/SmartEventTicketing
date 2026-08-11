@@ -148,25 +148,4 @@ const handleLogin = async () => {
 }
 </script>
 
-<style scoped>
-.auth-container {
-  min-height: calc(100vh - 160px);
-}
-
-.auth-card {
-  max-width: 440px;
-}
-
-.icon-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-toggle-eye {
-  cursor: pointer;
-}
-</style>
+<style scoped src="./LoginView.css"></style>

@@ -182,32 +182,4 @@ const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currenc
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 </script>
 
-<style scoped>
-.hero-detail {
-  height: 400px;
-}
-
-.detail-overlay {
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.3) 100%);
-}
-
-.style-pre-line {
-  white-space: pre-line;
-}
-
-.bg-dark-slate {
-  background-color: #0F172A;
-}
-
-.text-cyan {
-  color: #38BDF8;
-}
-
-.fw-extrabold {
-  font-weight: 800;
-}
-
-.text-slate-900 {
-  color: #0F172A;
-}
-</style>
+<style scoped src="./EventDetailView.css"></style>
