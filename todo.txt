@@ -246,10 +246,7 @@ admin chuc nang....
 
 test test test test 
 ----------------
-Hoàn thiện PayOS webhook: chữ ký, số tiền, transaction ID, chống webhook lặp.
-Hoàn thiện QR và check-in: chỉ vé PAID, chống check-in hai lần.
-Sửa permission: organizer chỉ quản lý sự kiện của mình, khóa user phải chặn đăng nhập.
-Đồng bộ frontend: payment cancel/return, countdown, trạng thái đơn và ghế.
+
 Dashboard và báo cáo lấy dữ liệu API thật.
 Thêm test race condition, IDOR và permission. 
 

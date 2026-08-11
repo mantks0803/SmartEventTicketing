@@ -23,30 +23,6 @@ SmartEventTicketing/
 └── .github/workflows/        # GitHub Actions
 ```
 
-## Cấu trúc giao diện Vue
-
-```text
-frontend/src/
-├── views/
-│   ├── public/               # Trang chủ và chi tiết sự kiện
-│   ├── auth/                 # Đăng nhập và đăng ký
-│   ├── customer/             # Checkout, kết quả thanh toán và vé
-│   ├── organizer/            # Dashboard và tạo sự kiện
-│   ├── admin/                # Duyệt sự kiện
-│   └── account/              # Hồ sơ cá nhân
-├── components/               # Component dùng lại
-└── assets/main.css           # CSS dùng chung toàn ứng dụng
-```
-
-Mỗi view/component có một file CSS cùng tên đặt ngay bên cạnh:
-
-```text
-HomeView.vue
-HomeView.css
-```
-
-File Vue nhúng CSS bằng `<style scoped src="./HomeView.css"></style>` để style không ảnh hưởng sang trang khác.
-
 ## Chạy Backend
 
 Mở PowerShell tại thư mục gốc dự án, sau đó chuyển vào backend:
@@ -92,10 +68,3 @@ npm run build
 ```
 
 Xem kế hoạch và kết quả kiểm thử trong thư mục `docs/`.
-
-## Nguyên tắc phát triển
-
-- Giữ code đơn giản, rõ ràng và đúng tầm đồ án sinh viên.
-- Không tự ý đổi tên API, model, route hoặc field đang được sử dụng.
-- Ưu tiên các cấu trúc cơ bản của Django REST Framework và Vue 3.
-- Comment ngắn gọn tại những đoạn xử lý nghiệp vụ quan trọng.
