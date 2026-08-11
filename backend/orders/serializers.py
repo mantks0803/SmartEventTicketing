@@ -114,3 +114,33 @@ class HoldSeatsInputSerializer(serializers.Serializer):
 
 class CheckInInputSerializer(serializers.Serializer):
     qr_code = serializers.CharField(max_length=250)
+
+
+class RevenueByTicketTypeSerializer(serializers.Serializer):
+    ticket_type_id = serializers.IntegerField()
+    ticket_type_name = serializers.CharField()
+    sold_quantity = serializers.IntegerField()
+    revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class RevenueTransactionSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+    customer_name = serializers.CharField()
+    seat_count = serializers.IntegerField()
+    total_amount = serializers.DecimalField(max_digits=16, decimal_places=2)
+    created_at = serializers.DateTimeField()
+
+
+class OrganizerEventRevenueReportSerializer(serializers.Serializer):
+    event_id = serializers.IntegerField()
+    event_title = serializers.CharField()
+    event_status = serializers.CharField()
+    is_payout_completed = serializers.BooleanField()
+    total_seats = serializers.IntegerField()
+    available_seats = serializers.IntegerField()
+    locked_seats = serializers.IntegerField()
+    sold_seats = serializers.IntegerField()
+    checked_in_tickets = serializers.IntegerField()
+    total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+    revenue_by_ticket_type = RevenueByTicketTypeSerializer(many=True)
+    transactions = RevenueTransactionSerializer(many=True)

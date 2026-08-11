@@ -79,6 +79,16 @@
               <i class="bi bi-qr-code-scan"></i>
               Soát vé
             </button>
+
+            <button
+              type="button"
+              class="sidebar-link"
+              :class="{ active: activeTab === 'revenue' }"
+              @click="activeTab = 'revenue'"
+            >
+              <i class="bi bi-bar-chart-line"></i>
+              Báo cáo doanh thu
+            </button>
           </aside>
         </div>
 
@@ -222,6 +232,11 @@
               </div>
             </div>
 
+            <OrganizerRevenueReport
+              v-if="activeTab === 'revenue'"
+              :events="events"
+            />
+
             <div v-if="activeTab === 'checkin'" class="content-card">
               <div class="checkin-box">
                 <div class="checkin-icon">
@@ -276,6 +291,7 @@ import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
+import OrganizerRevenueReport from '@/components/organizer/OrganizerRevenueReport.vue'
 import apiClient from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 

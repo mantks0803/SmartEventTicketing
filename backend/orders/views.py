@@ -3,13 +3,15 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Count, Q, Sum
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from authentication.permissions import IsCustomerPermission, IsOrganizerPermission
-from events.models import EventStatusEnum
+from events.models import Event, EventStatusEnum
 from orders.models import (
     Order,
     OrderStatusEnum,
@@ -22,15 +24,18 @@ from orders.serializers import (
     CustomerTicketSerializer,
     HoldSeatsInputSerializer,
     OrderSerializer,
+    OrganizerEventRevenueReportSerializer,
 )
 from orders.services import (
     OrderLifecycleError,
     cancel_pending_order,
     confirm_order_payment,
     expire_order,
+    expire_stale_orders,
     hold_seats,
 )
 from orders.utils import send_payment_success_email
+from seating.models import SeatStatusEnum
 
 
 logger = logging.getLogger(__name__)
@@ -338,6 +343,118 @@ class CheckInView(APIView):
                 {'error': 'Mã vé QR không hợp lệ hoặc không tồn tại.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+
+class OrganizerEventRevenueReportView(APIView):
+    """Báo cáo doanh thu của một sự kiện thuộc Ban tổ chức."""
+
+    permission_classes = [permissions.IsAuthenticated, IsOrganizerPermission]
+
+    def get(self, request, event_id):
+        organizer = getattr(request.user, 'organizer', None)
+
+        # Lọc theo cả event và chủ sở hữu để event của BTC khác trả về 404.
+        event = get_object_or_404(
+            Event,
+            id=event_id,
+            organizer=organizer,
+        )
+
+        # Đồng bộ các ghế đã hết 10 phút giữ trước khi thống kê.
+        expire_stale_orders()
+
+        seat_counts = event.seats.aggregate(
+            total_seats=Count('id'),
+            available_seats=Count(
+                'id',
+                filter=Q(status=SeatStatusEnum.AVAILABLE),
+            ),
+            locked_seats=Count(
+                'id',
+                filter=Q(status=SeatStatusEnum.LOCKED),
+            ),
+            sold_seats=Count(
+                'id',
+                filter=Q(status=SeatStatusEnum.SOLD),
+            ),
+        )
+
+        # Chỉ đơn PAID mới được tính vào doanh thu.
+        paid_orders = Order.objects.filter(
+            event=event,
+            status=OrderStatusEnum.PAID,
+        )
+        total_revenue = (
+            paid_orders.aggregate(total=Sum('total_amount'))['total']
+            or Decimal('0.00')
+        )
+
+        checked_in_tickets = Ticket.objects.filter(
+            order__event=event,
+            order__status=OrderStatusEnum.PAID,
+            is_checked_in=True,
+        ).count()
+
+        # Dùng unit_price đã lưu lúc mua, không dùng giá vé hiện tại.
+        ticket_type_queryset = event.ticket_types.annotate(
+            sold_quantity=Count(
+                'order_items',
+                filter=Q(
+                    order_items__order__status=OrderStatusEnum.PAID,
+                    order_items__order__event=event,
+                ),
+            ),
+            report_revenue=Sum(
+                'order_items__unit_price',
+                filter=Q(
+                    order_items__order__status=OrderStatusEnum.PAID,
+                    order_items__order__event=event,
+                ),
+            ),
+        ).order_by('name')
+
+        revenue_by_ticket_type = [
+            {
+                'ticket_type_id': ticket_type.id,
+                'ticket_type_name': ticket_type.name,
+                'sold_quantity': ticket_type.sold_quantity,
+                'revenue': ticket_type.report_revenue or Decimal('0.00'),
+            }
+            for ticket_type in ticket_type_queryset
+        ]
+
+        # select_related lấy Customer và User cùng query, tránh N+1.
+        transaction_queryset = (
+            paid_orders
+            .select_related('customer__user')
+            .annotate(seat_count=Count('items'))
+            .order_by('-created_at')
+        )
+        transactions = [
+            {
+                'order_id': order.id,
+                'customer_name': order.customer.user.name,
+                'seat_count': order.seat_count,
+                'total_amount': order.total_amount,
+                'created_at': order.created_at,
+            }
+            for order in transaction_queryset
+        ]
+
+        report_data = {
+            'event_id': event.id,
+            'event_title': event.title,
+            'event_status': event.status,
+            'is_payout_completed': event.is_payout_completed,
+            **seat_counts,
+            'checked_in_tickets': checked_in_tickets,
+            'total_revenue': total_revenue,
+            'revenue_by_ticket_type': revenue_by_ticket_type,
+            'transactions': transactions,
+        }
+
+        serializer = OrganizerEventRevenueReportSerializer(report_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ReconcilePayOSPaymentView(APIView):

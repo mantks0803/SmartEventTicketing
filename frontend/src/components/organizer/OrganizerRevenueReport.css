@@ -1,0 +1,210 @@
+.revenue-report {
+  width: 100%;
+}
+
+.report-panel {
+  padding: 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.report-toolbar,
+.report-title-row,
+.table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.event-select-box {
+  width: min(100%, 360px);
+}
+
+.event-select-box .form-select {
+  min-width: 280px;
+  border-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+.event-select-box .form-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.12);
+}
+
+.empty-report {
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.empty-report-icon {
+  color: #94a3b8;
+  font-size: 3rem;
+}
+
+.report-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.status-published,
+.status-payout-done {
+  color: #047857;
+  background: #d1fae5;
+}
+
+.status-pending,
+.status-payout-pending {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.status-cancelled {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.report-stat-card {
+  height: 100%;
+  min-height: 150px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.report-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.report-stat-card small {
+  display: block;
+  margin-top: 14px;
+  color: #64748b;
+}
+
+.report-stat-card strong {
+  display: block;
+  margin-top: 3px;
+  color: #0f172a;
+  font-size: 1.45rem;
+}
+
+.report-stat-icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 1.15rem;
+}
+
+.icon-blue {
+  color: #2563eb;
+  background: #dbeafe;
+}
+
+.icon-green {
+  color: #059669;
+  background: #d1fae5;
+}
+
+.icon-slate {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+.icon-orange {
+  color: #d97706;
+  background: #fef3c7;
+}
+
+.icon-purple {
+  color: #7c3aed;
+  background: #ede9fe;
+}
+
+.icon-revenue {
+  color: #047857;
+  background: #a7f3d0;
+}
+
+.revenue-card {
+  border-color: #a7f3d0;
+  background: linear-gradient(145deg, #ffffff, #ecfdf5);
+}
+
+.report-stat-card .revenue-value {
+  color: #047857;
+  font-size: 1.05rem;
+  word-break: break-word;
+}
+
+.report-table thead th {
+  padding: 12px 14px;
+  border-bottom-width: 1px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.report-table tbody td,
+.report-table tfoot th {
+  padding: 14px;
+  border-color: #f1f5f9;
+}
+
+.report-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.transaction-count {
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.order-code {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .report-panel {
+    padding: 18px;
+    border-radius: 15px;
+  }
+
+  .report-toolbar,
+  .report-title-row,
+  .table-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .event-select-box {
+    width: 100%;
+  }
+
+  .event-select-box .form-select {
+    min-width: 0;
+  }
+
+  .report-stat-card {
+    min-height: 135px;
+  }
+}

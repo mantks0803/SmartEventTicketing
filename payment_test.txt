@@ -1,19 +1,3 @@
-HƯỚNG DẪN TEST THANH TOÁN GIẢ LẬP
-KHÔNG DÙNG NGÂN HÀNG - KHÔNG CHUYỂN TIỀN THẬT
-============================================================
-
-Tài liệu này khớp với luồng code hiện tại:
-
-Chọn ghế
-    -> tạo Order PENDING và khóa ghế
-    -> mở trang kết quả thanh toán giả lập
-    -> gửi webhook PayOS giả
-    -> Order PAID
-    -> Seat SOLD
-    -> tạo Payment SUCCESS
-    -> tạo Ticket và QR
-    -> gửi/in email
-    -> vé xuất hiện trong "Vé của tôi"
 
 
 1. CHẾ ĐỘ NÀY TEST ĐƯỢC GÌ?
@@ -55,20 +39,20 @@ Sau khi test xong bắt buộc đổi lại:
 
 PAYOS_SKIP_SIGNATURE_CHECK=False
 
-Không commit file backend/.env hoặc mật khẩu email lên GitHub.
+Không commit file .env hoặc mật khẩu email lên GitHub.
 
 
 3. CHUẨN BỊ FILE .ENV
 ============================================================
 
-Bước 1. Mở PowerShell tại thư mục backend:
+Bước 1. Mở PowerShell tại thư mục project:
 
-D:\SmartEventTicketing\backend
+D:\SmartEventTicketing
 
 
 Bước 2. Mở file:
 
-D:\SmartEventTicketing\backend\.env
+D:\SmartEventTicketing\.env
 
 
 Bước 3. Đổi cấu hình PayOS mock thành:
@@ -120,13 +104,13 @@ Lưu ý:
 4. KHỞI ĐỘNG LẠI BACKEND VÀ FRONTEND
 ============================================================
 
-Thay đổi backend/.env chỉ chắc chắn có hiệu lực sau khi tắt và chạy lại backend.
+Thay đổi .env chỉ chắc chắn có hiệu lực sau khi tắt và chạy lại backend.
 
 
 Bước 1. Chạy backend:
 
-cd D:\SmartEventTicketing\backend
-..\venv\Scripts\python.exe manage.py runserver
+cd D:\SmartEventTicketing
+.\venv\Scripts\python.exe manage.py runserver
 
 Kết quả mong đợi:
 
@@ -145,8 +129,8 @@ Local: http://localhost:5173/
 
 Bước 3. Có thể kiểm tra backend đã đọc đúng chế độ mock bằng lệnh:
 
-cd D:\SmartEventTicketing\backend
-..\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print('PAYOS mock =', settings.PAYOS_SKIP_SIGNATURE_CHECK); print('Email backend =', settings.EMAIL_BACKEND)"
+cd D:\SmartEventTicketing
+.\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print('PAYOS mock =', settings.PAYOS_SKIP_SIGNATURE_CHECK); print('Email backend =', settings.EMAIL_BACKEND)"
 
 Kết quả đúng phải có:
 
@@ -397,7 +381,7 @@ Không cần gửi webhook lần thứ hai.
 
 Thay số 25 thành Order ID của bạn:
 
-..\venv\Scripts\python.exe manage.py shell -c "from orders.models import Order; o=Order.objects.get(id=25); print('Order =', o.status); print('Payments =', o.payments.count()); print('Tickets =', o.tickets.count()); print('Seats =', [(i.seat.seat_name, i.seat.status) for i in o.items.select_related('seat')])"
+.\venv\Scripts\python.exe manage.py shell -c "from orders.models import Order; o=Order.objects.get(id=25); print('Order =', o.status); print('Payments =', o.payments.count()); print('Tickets =', o.tickets.count()); print('Seats =', [(i.seat.seat_name, i.seat.status) for i in o.items.select_related('seat')])"
 
 Ví dụ mua 2 ghế, kết quả đúng:
 
@@ -704,22 +688,22 @@ Nếu SMTP backend:
 
 Chạy riêng test orders:
 
-cd D:\SmartEventTicketing\backend
-..\venv\Scripts\python.exe manage.py test orders --verbosity 2
+cd D:\SmartEventTicketing
+.\venv\Scripts\python.exe manage.py test orders --verbosity 2
 
 Theo code hiện tại, kết quả mong đợi:
 
-Found 35 test(s)
+Found 17 test(s)
 OK
 
 
 Chạy toàn bộ backend test:
 
-..\venv\Scripts\python.exe manage.py test
+.\venv\Scripts\python.exe manage.py test
 
 Theo code hiện tại, kết quả mong đợi:
 
-Found 70 test(s)
+Found 21 test(s)
 OK
 
 
@@ -747,7 +731,7 @@ Các test liên quan bao gồm:
 
 Bước 1. Mở lại:
 
-D:\SmartEventTicketing\backend\.env
+D:\SmartEventTicketing\.env
 
 
 Bước 2. Đổi:
@@ -766,13 +750,13 @@ EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 
 Bước 4. Tắt và chạy lại backend:
 
-cd D:\SmartEventTicketing\backend
-..\venv\Scripts\python.exe manage.py runserver
+cd D:\SmartEventTicketing
+.\venv\Scripts\python.exe manage.py runserver
 
 
 Bước 5. Kiểm tra:
 
-..\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print(settings.PAYOS_SKIP_SIGNATURE_CHECK)"
+.\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print(settings.PAYOS_SKIP_SIGNATURE_CHECK)"
 
 Kết quả phải là:
 
@@ -789,7 +773,7 @@ Sau đó hệ thống trở lại chế độ thật:
 19. TÓM TẮT NHANH
 ============================================================
 
-1. Đặt PAYOS_SKIP_SIGNATURE_CHECK=True trong backend/.env.
+1. Đặt PAYOS_SKIP_SIGNATURE_CHECK=True trong .env.
 2. Chọn console email hoặc SMTP email.
 3. Restart backend.
 4. Chạy frontend.
