@@ -245,6 +245,8 @@ doanh thu cho btc,admin
 admin chuc nang....
 
 test test test test 
+
+fake data for revenue?
 ----------------
 
 Dashboard và báo cáo lấy dữ liệu API thật.

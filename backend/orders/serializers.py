@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from events.models import EventCategoryEnum
 from orders.models import Order, OrderItem, Ticket
 from orders.services import MAX_SEATS_PER_ORDER
 from seating.serializers import SeatSerializer
@@ -144,3 +145,85 @@ class OrganizerEventRevenueReportSerializer(serializers.Serializer):
     total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
     revenue_by_ticket_type = RevenueByTicketTypeSerializer(many=True)
     transactions = RevenueTransactionSerializer(many=True)
+
+
+class AdminRevenueReportQuerySerializer(serializers.Serializer):
+    event_id = serializers.IntegerField(required=False, min_value=1)
+    organizer_id = serializers.IntegerField(required=False, min_value=1)
+    category = serializers.ChoiceField(
+        required=False,
+        choices=EventCategoryEnum.choices,
+    )
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+
+    def validate(self, data):
+        date_from = data.get('date_from')
+        date_to = data.get('date_to')
+
+        if date_from and date_to and date_from > date_to:
+            raise serializers.ValidationError({
+                'date_to': 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+            })
+
+        return data
+
+
+class AdminRevenueOverviewSerializer(serializers.Serializer):
+    total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+    total_paid_orders = serializers.IntegerField()
+    total_tickets_sold = serializers.IntegerField()
+    total_events = serializers.IntegerField()
+    total_checked_in = serializers.IntegerField()
+
+
+class RevenueByMonthSerializer(serializers.Serializer):
+    month = serializers.CharField()
+    total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class RevenueByCategorySerializer(serializers.Serializer):
+    category = serializers.CharField()
+    category_name = serializers.CharField()
+    total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class RevenueByOrganizerSerializer(serializers.Serializer):
+    organizer_id = serializers.IntegerField()
+    company_name = serializers.CharField()
+    total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class RevenueByEventSerializer(serializers.Serializer):
+    event_id = serializers.IntegerField()
+    title = serializers.CharField()
+    total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class AdminRevenueReportSerializer(serializers.Serializer):
+    overview = AdminRevenueOverviewSerializer()
+    revenue_by_month = RevenueByMonthSerializer(many=True)
+    revenue_by_category = RevenueByCategorySerializer(many=True)
+    revenue_by_organizer = RevenueByOrganizerSerializer(many=True)
+    revenue_by_event = RevenueByEventSerializer(many=True)
+
+
+class RevenueFilterEventSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+
+
+class RevenueFilterOrganizerSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    company_name = serializers.CharField()
+
+
+class RevenueFilterCategorySerializer(serializers.Serializer):
+    value = serializers.CharField()
+    label = serializers.CharField()
+
+
+class AdminRevenueFilterSerializer(serializers.Serializer):
+    events = RevenueFilterEventSerializer(many=True)
+    organizers = RevenueFilterOrganizerSerializer(many=True)
+    categories = RevenueFilterCategorySerializer(many=True)

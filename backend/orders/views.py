@@ -4,14 +4,20 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from authentication.permissions import IsCustomerPermission, IsOrganizerPermission
-from events.models import Event, EventStatusEnum
+from authentication.models import Organizer
+from authentication.permissions import (
+    IsAdminPermission,
+    IsCustomerPermission,
+    IsOrganizerPermission,
+)
+from events.models import Event, EventCategoryEnum, EventStatusEnum
 from orders.models import (
     Order,
     OrderStatusEnum,
@@ -20,6 +26,9 @@ from orders.models import (
     Ticket,
 )
 from orders.serializers import (
+    AdminRevenueFilterSerializer,
+    AdminRevenueReportQuerySerializer,
+    AdminRevenueReportSerializer,
     CheckInInputSerializer,
     CustomerTicketSerializer,
     HoldSeatsInputSerializer,
@@ -454,6 +463,183 @@ class OrganizerEventRevenueReportView(APIView):
         }
 
         serializer = OrganizerEventRevenueReportSerializer(report_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminRevenueReportView(APIView):
+    """Báo cáo doanh thu của toàn hệ thống dành cho Admin."""
+
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+
+    def get(self, request):
+        query_serializer = AdminRevenueReportQuerySerializer(
+            data=request.query_params,
+        )
+        query_serializer.is_valid(raise_exception=True)
+        filters = query_serializer.validated_data
+
+        # Tạo một queryset gốc để tất cả số liệu dùng chung điều kiện lọc.
+        paid_orders = Order.objects.filter(
+            status=OrderStatusEnum.PAID,
+            event__isnull=False,
+        )
+
+        if filters.get('event_id'):
+            paid_orders = paid_orders.filter(event_id=filters['event_id'])
+
+        if filters.get('organizer_id'):
+            paid_orders = paid_orders.filter(
+                event__organizer_id=filters['organizer_id'],
+            )
+
+        if filters.get('category'):
+            paid_orders = paid_orders.filter(
+                event__category=filters['category'],
+            )
+
+        if filters.get('date_from'):
+            paid_orders = paid_orders.filter(
+                created_at__date__gte=filters['date_from'],
+            )
+
+        if filters.get('date_to'):
+            paid_orders = paid_orders.filter(
+                created_at__date__lte=filters['date_to'],
+            )
+
+        overview_result = paid_orders.aggregate(
+            total_revenue=Sum('total_amount'),
+            total_paid_orders=Count('id'),
+            total_events=Count('event_id', distinct=True),
+        )
+
+        # Đếm OrderItem và Ticket ở query riêng để không nhân đôi tổng doanh thu.
+        total_tickets_sold = paid_orders.aggregate(
+            total=Count('items'),
+        )['total']
+        total_checked_in = Ticket.objects.filter(
+            order__in=paid_orders,
+            is_checked_in=True,
+        ).count()
+
+        overview = {
+            'total_revenue': (
+                overview_result['total_revenue'] or Decimal('0.00')
+            ),
+            'total_paid_orders': overview_result['total_paid_orders'],
+            'total_tickets_sold': total_tickets_sold,
+            'total_events': overview_result['total_events'],
+            'total_checked_in': total_checked_in,
+        }
+
+        # Group theo tháng tạo đơn để frontend hiển thị biểu đồ thời gian.
+        month_queryset = (
+            paid_orders
+            .annotate(report_month=TruncMonth('created_at'))
+            .values('report_month')
+            .annotate(total_revenue=Sum('total_amount'))
+            .order_by('report_month')
+        )
+        revenue_by_month = [
+            {
+                'month': row['report_month'].strftime('%Y-%m'),
+                'total_revenue': row['total_revenue'],
+            }
+            for row in month_queryset
+        ]
+
+        category_labels = dict(EventCategoryEnum.choices)
+        category_queryset = (
+            paid_orders
+            .values('event__category')
+            .annotate(total_revenue=Sum('total_amount'))
+            .order_by('event__category')
+        )
+        revenue_by_category = [
+            {
+                'category': row['event__category'],
+                'category_name': category_labels.get(
+                    row['event__category'],
+                    row['event__category'],
+                ),
+                'total_revenue': row['total_revenue'],
+            }
+            for row in category_queryset
+        ]
+
+        organizer_queryset = (
+            paid_orders
+            .values(
+                'event__organizer_id',
+                'event__organizer__company_name',
+            )
+            .annotate(total_revenue=Sum('total_amount'))
+            .order_by('-total_revenue', 'event__organizer_id')[:10]
+        )
+        revenue_by_organizer = [
+            {
+                'organizer_id': row['event__organizer_id'],
+                'company_name': row['event__organizer__company_name'],
+                'total_revenue': row['total_revenue'],
+            }
+            for row in organizer_queryset
+        ]
+
+        event_queryset = (
+            paid_orders
+            .values('event_id', 'event__title')
+            .annotate(total_revenue=Sum('total_amount'))
+            .order_by('-total_revenue', 'event_id')[:10]
+        )
+        revenue_by_event = [
+            {
+                'event_id': row['event_id'],
+                'title': row['event__title'],
+                'total_revenue': row['total_revenue'],
+            }
+            for row in event_queryset
+        ]
+
+        report_data = {
+            'overview': overview,
+            'revenue_by_month': revenue_by_month,
+            'revenue_by_category': revenue_by_category,
+            'revenue_by_organizer': revenue_by_organizer,
+            'revenue_by_event': revenue_by_event,
+        }
+
+        serializer = AdminRevenueReportSerializer(report_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminRevenueFilterView(APIView):
+    """Danh sách giá trị dùng cho các dropdown lọc báo cáo."""
+
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+
+    def get(self, request):
+        events = Event.objects.order_by('title').values('id', 'title')
+        organizers = Organizer.objects.order_by('company_name').values(
+            'user_id',
+            'company_name',
+        )
+
+        filter_data = {
+            'events': list(events),
+            'organizers': [
+                {
+                    'id': organizer['user_id'],
+                    'company_name': organizer['company_name'],
+                }
+                for organizer in organizers
+            ],
+            'categories': [
+                {'value': value, 'label': label}
+                for value, label in EventCategoryEnum.choices
+            ],
+        }
+
+        serializer = AdminRevenueFilterSerializer(filter_data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
