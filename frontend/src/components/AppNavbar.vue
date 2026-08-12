@@ -116,8 +116,8 @@
                 to="/admin/events"
                 class="btn btn-outline-info text-cyan btn-sm rounded-pill px-3 ms-lg-2"
               >
-                <i class="bi bi-shield-check me-1"></i>
-                Duyệt sự kiện
+                <i class="bi bi-speedometer2 me-1"></i>
+                Quản trị
               </router-link>
             </li>
 
@@ -203,8 +203,8 @@
                       class="dropdown-item py-2 fs-6"
                       @click="closeDropdown"
                     >
-                      <i class="bi bi-shield-check me-2 text-primary"></i>
-                      Duyệt sự kiện
+                      <i class="bi bi-speedometer2 me-2 text-primary"></i>
+                      Quản trị
                     </router-link>
                   </li>
                 </template>

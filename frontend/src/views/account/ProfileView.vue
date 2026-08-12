@@ -151,7 +151,7 @@ const avatarPreview = ref(null)
 const uploadingAvatar = ref(false)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
-const defaultAvatar = 'https://res.cloudinary.com/dmhnfoc9i/image/upload/v1777361181/tickethub_avatars/btsrovtumjgqlaharj2r.jpg'
+const defaultAvatar = 'https://res.cloudinary.com/dmhnfoc9i/image/upload/v1786521112/avatardefault_92824_v2bkac.webp'
 
 const profile = reactive({
   id: null,

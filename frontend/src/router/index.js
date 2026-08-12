@@ -97,6 +97,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/revenue-report',
+      name: 'admin-revenue-report',
+      component: () => import('@/views/admin/AdminRevenueReportView.vue'),
+      meta: {
+        requiresAuth: true,
+        role: 'ADMIN'
+      }
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/account/ProfileView.vue'),

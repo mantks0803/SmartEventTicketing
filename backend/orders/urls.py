@@ -4,6 +4,7 @@ from orders.views import (
     CancelOrderView, CreatePayOSPaymentView, PayOSWebhookView,
     CustomerTicketListView, CheckInView, ReconcilePayOSPaymentView,
     OrganizerEventRevenueReportView,
+    AdminRevenueFilterView, AdminRevenueReportView,
 )
 
 urlpatterns = [
@@ -15,6 +16,16 @@ urlpatterns = [
         'organizer/events/<int:event_id>/report/',
         OrganizerEventRevenueReportView.as_view(),
         name='organizer_event_revenue_report',
+    ),
+    path(
+        'admin/revenue-report/',
+        AdminRevenueReportView.as_view(),
+        name='admin_revenue_report',
+    ),
+    path(
+        'admin/revenue-report/filters/',
+        AdminRevenueFilterView.as_view(),
+        name='admin_revenue_report_filters',
     ),
     path('<int:pk>/', OrderDetailView.as_view(), name='order_detail'),
     path('<int:pk>/cancel/', CancelOrderView.as_view(), name='cancel_order'),
