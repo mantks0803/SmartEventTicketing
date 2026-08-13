@@ -42,6 +42,21 @@
         <i class="bi bi-chevron-right admin-menu-arrow"></i>
       </RouterLink>
 
+      <RouterLink
+        :to="{ name: 'admin-users' }"
+        class="admin-menu-item"
+        :class="{ active: route.name === 'admin-users' }"
+      >
+        <span class="admin-menu-icon">
+          <i class="bi bi-people"></i>
+        </span>
+        <span>
+          <strong>Quản lý người dùng</strong>
+          <small>Tài khoản và trạng thái</small>
+        </span>
+        <i class="bi bi-chevron-right admin-menu-arrow"></i>
+      </RouterLink>
+
       <div class="admin-sidebar-divider">Chức năng sắp tới</div>
 
       <div
@@ -70,11 +85,6 @@ const route = useRoute()
 
 // Các mục này chỉ hiển thị giao diện, chưa điều hướng hoặc gọi API.
 const upcomingItems = [
-  {
-    title: 'Quản lý người dùng',
-    description: 'Tài khoản và phân quyền',
-    icon: 'bi bi-people',
-  },
   {
     title: 'Quản lý thanh toán',
     description: 'Đối soát và hoàn tiền',
