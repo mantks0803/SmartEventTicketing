@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import User, Customer, Organizer
+from .models import User, Customer, Organizer, UserType
 
 User = get_user_model()
 
@@ -71,7 +71,7 @@ class LoginSerializer(serializers.Serializer):
             user = User.objects.filter(username=username_or_email).first()
 
         if user and user.check_password(password):
-            if not user.is_active:
+            if not user.is_active or not user.status:
                 raise serializers.ValidationError('Tài khoản đã bị khóa.')
             attrs['user'] = user
             return attrs
@@ -130,3 +130,98 @@ class OrganizerProfileSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class AdminUserQuerySerializer(serializers.Serializer):
+    search = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(
+        required=False,
+        choices=['ALL', 'ADMIN', 'CUSTOMER', 'ORGANIZER'],
+    )
+    account_status = serializers.ChoiceField(
+        required=False,
+        choices=['ALL', 'ACTIVE', 'LOCKED'],
+    )
+    page = serializers.IntegerField(required=False, min_value=1)
+    page_size = serializers.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=100,
+    )
+
+
+class AdminUserListSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    account_status = serializers.SerializerMethodField()
+    can_change_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'name', 'username', 'email', 'phone_number', 'avatar',
+            'role', 'account_status', 'is_active', 'status', 'date_joined',
+            'last_login', 'is_superuser', 'can_change_status',
+        ]
+
+    def get_role(self, user):
+        # Staff và superuser luôn được hiển thị là Admin.
+        if user.is_staff or user.is_superuser:
+            return UserType.ADMIN
+        return user.type
+
+    def get_account_status(self, user):
+        if user.is_active and user.status:
+            return 'ACTIVE'
+        return 'LOCKED'
+
+    def get_can_change_status(self, user):
+        request = self.context.get('request')
+        is_current_user = bool(request and request.user.id == user.id)
+        is_admin = (
+            user.type == UserType.ADMIN
+            or user.is_staff
+            or user.is_superuser
+        )
+        return not is_current_user and not is_admin
+
+
+class AdminUserDetailSerializer(AdminUserListSerializer):
+    dob = serializers.DateField(read_only=True)
+    customer_profile = serializers.SerializerMethodField()
+    organizer_profile = serializers.SerializerMethodField()
+    statistics = serializers.SerializerMethodField()
+
+    class Meta(AdminUserListSerializer.Meta):
+        fields = AdminUserListSerializer.Meta.fields + [
+            'dob', 'customer_profile', 'organizer_profile', 'statistics',
+        ]
+
+    def get_customer_profile(self, user):
+        try:
+            customer = user.customer
+        except Customer.DoesNotExist:
+            return None
+
+        return {'tier': customer.tier}
+
+    def get_organizer_profile(self, user):
+        try:
+            organizer = user.organizer
+        except Organizer.DoesNotExist:
+            return None
+
+        return {
+            'company_name': organizer.company_name,
+            'bank_account': organizer.bank_account,
+        }
+
+    def get_statistics(self, user):
+        return self.context.get('statistics', {})
+
+
+class AdminUserSummarySerializer(serializers.Serializer):
+    total_users = serializers.IntegerField()
+    total_customers = serializers.IntegerField()
+    total_organizers = serializers.IntegerField()
+    total_admins = serializers.IntegerField()
+    total_locked = serializers.IntegerField()
