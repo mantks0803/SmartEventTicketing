@@ -4,7 +4,6 @@ from authentication.models import UserType
 
 
 class IsActiveAccountPermission(permissions.BasePermission):
-    """Chặn tài khoản bị khóa kể cả khi JWT cũ vẫn còn hạn."""
 
     def has_permission(self, request, view):
         user = request.user

@@ -57,23 +57,20 @@
         <i class="bi bi-chevron-right admin-menu-arrow"></i>
       </RouterLink>
 
-      <div class="admin-sidebar-divider">Chức năng sắp tới</div>
-
-      <div
-        v-for="item in upcomingItems"
-        :key="item.title"
-        class="admin-menu-item disabled"
-        aria-disabled="true"
+      <RouterLink
+        :to="{ name: 'admin-payments' }"
+        class="admin-menu-item"
+        :class="{ active: route.name === 'admin-payments' }"
       >
         <span class="admin-menu-icon">
-          <i :class="item.icon"></i>
+          <i class="bi bi-credit-card"></i>
         </span>
         <span>
-          <strong>{{ item.title }}</strong>
-          <small>{{ item.description }}</small>
-          <span class="coming-soon-badge">Chưa triển khai</span>
+          <strong>Quản lý thanh toán</strong>
+          <small>Giao dịch và đối soát</small>
         </span>
-      </div>
+        <i class="bi bi-chevron-right admin-menu-arrow"></i>
+      </RouterLink>
     </nav>
   </div>
 </template>
@@ -82,20 +79,6 @@
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-
-// Các mục này chỉ hiển thị giao diện, chưa điều hướng hoặc gọi API.
-const upcomingItems = [
-  {
-    title: 'Quản lý thanh toán',
-    description: 'Đối soát và hoàn tiền',
-    icon: 'bi bi-credit-card',
-  },
-  {
-    title: 'Cấu hình hệ thống',
-    description: 'Thiết lập chung',
-    icon: 'bi bi-gear',
-  },
-]
 </script>
 
 <style scoped src="./AdminSidebar.css"></style>

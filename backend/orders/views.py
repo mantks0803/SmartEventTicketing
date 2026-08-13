@@ -3,11 +3,12 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Prefetch, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -26,6 +27,10 @@ from orders.models import (
     Ticket,
 )
 from orders.serializers import (
+    AdminPaymentDetailSerializer,
+    AdminPaymentListSerializer,
+    AdminPaymentQuerySerializer,
+    AdminPaymentSummarySerializer,
     AdminRevenueFilterSerializer,
     AdminRevenueReportQuerySerializer,
     AdminRevenueReportSerializer,
@@ -80,6 +85,109 @@ def _get_webhook_value(data, *keys):
             if value is not None:
                 return value
     return None
+
+
+def _admin_payment_base_queryset():
+    """Query chung cho trang thanh toán Admin, tránh gọi DB theo từng dòng."""
+    return (
+        Order.objects
+        .select_related(
+            'customer__user',
+            'event__organizer__user',
+        )
+        .prefetch_related(
+            Prefetch('payments', queryset=Payment.objects.order_by('-created_at')),
+            'items__ticket_type',
+            'items__seat__ticket_type',
+            'items__seat__ticket',
+            'tickets__ticket_type',
+            'tickets__seat__ticket_type',
+        )
+    )
+
+
+def _annotate_admin_payment_counts(queryset):
+    """Đếm dữ liệu cần cho danh sách và phát hiện giao dịch bất thường."""
+    return queryset.annotate(
+        item_count=Count('items', distinct=True),
+        ticket_count=Count('tickets', distinct=True),
+        successful_payment_count=Count(
+            'payments',
+            filter=Q(payments__status=PaymentStatusEnum.SUCCESS),
+            distinct=True,
+        ),
+        invalid_amount_payment_count=Count(
+            'payments',
+            filter=(
+                Q(payments__status=PaymentStatusEnum.SUCCESS)
+                & ~Q(payments__amount=F('total_amount'))
+            ),
+            distinct=True,
+        ),
+        missing_reference_payment_count=Count(
+            'payments',
+            filter=(
+                Q(payments__status=PaymentStatusEnum.SUCCESS)
+                & (
+                    Q(payments__transaction_id__isnull=True)
+                    | Q(payments__transaction_id='')
+                )
+            ),
+            distinct=True,
+        ),
+        foreign_ticket_count=Count(
+            'items__seat__ticket',
+            filter=~Q(items__seat__ticket__order_id=F('id')),
+            distinct=True,
+        ),
+    )
+
+
+def _apply_admin_payment_filters(queryset, filters):
+    search = filters.get('search', '').strip()
+    if search:
+        search_query = (
+            Q(customer__user__name__icontains=search)
+            | Q(customer__user__email__icontains=search)
+            | Q(event__title__icontains=search)
+            | Q(payments__transaction_id__icontains=search)
+        )
+        if search.isdigit():
+            search_query |= Q(id=int(search))
+        queryset = queryset.filter(search_query)
+
+    if filters.get('status'):
+        queryset = queryset.filter(status=filters['status'])
+    if filters.get('event_id'):
+        queryset = queryset.filter(event_id=filters['event_id'])
+    if filters.get('organizer_id'):
+        queryset = queryset.filter(event__organizer_id=filters['organizer_id'])
+    if filters.get('date_from'):
+        queryset = queryset.filter(created_at__date__gte=filters['date_from'])
+    if filters.get('date_to'):
+        queryset = queryset.filter(created_at__date__lte=filters['date_to'])
+
+    return queryset.distinct()
+
+
+def _attention_query():
+    return (
+        Q(foreign_ticket_count__gt=0)
+        | (
+            ~Q(status=OrderStatusEnum.PAID)
+            & Q(successful_payment_count__gt=0)
+        )
+        | (
+            Q(status=OrderStatusEnum.PAID)
+            & Q(successful_payment_count=0)
+        )
+        | Q(invalid_amount_payment_count__gt=0)
+        | Q(missing_reference_payment_count__gt=0)
+        | (
+            Q(status=OrderStatusEnum.PAID)
+            & ~Q(ticket_count=F('item_count'))
+        )
+    )
 
 
 class HoldSeatsView(APIView):
@@ -643,186 +751,278 @@ class AdminRevenueFilterView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class AdminPaymentPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class AdminPaymentListView(generics.ListAPIView):
+    serializer_class = AdminPaymentListSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+    pagination_class = AdminPaymentPagination
+
+    def list(self, request, *args, **kwargs):
+        query_serializer = AdminPaymentQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        self.validated_filters = query_serializer.validated_data
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        filters = getattr(self, 'validated_filters', {})
+        queryset = _apply_admin_payment_filters(
+            _admin_payment_base_queryset(),
+            filters,
+        )
+        return _annotate_admin_payment_counts(queryset).order_by(
+            '-created_at',
+            '-id',
+        )
+
+
+class AdminPaymentSummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+
+    def get(self, request):
+        query_serializer = AdminPaymentQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+
+        filtered_orders = _apply_admin_payment_filters(
+            Order.objects.all(),
+            query_serializer.validated_data,
+        )
+        order_ids = filtered_orders.values_list('id', flat=True)
+        orders = Order.objects.filter(id__in=order_ids)
+
+        summary = orders.aggregate(
+            total_orders=Count('id'),
+            paid_orders=Count(
+                'id',
+                filter=Q(status=OrderStatusEnum.PAID),
+            ),
+            pending_orders=Count(
+                'id',
+                filter=Q(status=OrderStatusEnum.PENDING),
+            ),
+            cancelled_expired_orders=Count(
+                'id',
+                filter=Q(status__in=[
+                    OrderStatusEnum.CANCELLED,
+                    OrderStatusEnum.EXPIRED,
+                ]),
+            ),
+            total_revenue=Sum(
+                'total_amount',
+                filter=Q(status=OrderStatusEnum.PAID),
+            ),
+        )
+        summary['total_revenue'] = summary['total_revenue'] or Decimal('0.00')
+        summary['needs_attention'] = (
+            _annotate_admin_payment_counts(orders)
+            .filter(_attention_query())
+            .count()
+        )
+
+        serializer = AdminPaymentSummarySerializer(summary)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminPaymentDetailView(generics.RetrieveAPIView):
+    serializer_class = AdminPaymentDetailSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+    lookup_url_kwarg = 'order_id'
+
+    def get_queryset(self):
+        return _annotate_admin_payment_counts(
+            _admin_payment_base_queryset()
+        )
+
+
+def _reconcile_payos_order(order):
+    """Logic đối soát dùng chung cho Customer và Admin."""
+    if order.status == OrderStatusEnum.PAID:
+        return Response({
+            'status': 'success',
+            'payos_status': 'PAID',
+            'order': OrderSerializer(order).data,
+        })
+
+    if order.status not in {
+        OrderStatusEnum.PENDING,
+        OrderStatusEnum.EXPIRED,
+    }:
+        return Response(
+            {
+                'error': (
+                    'Đơn hàng đã bị hủy hoặc không còn được phép '
+                    'phát hành vé tự động.'
+                ),
+                'code': 'invalid_payment_state',
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    if not payos:
+        return Response(
+            {'error': 'PayOS chưa được cấu hình đầy đủ trên server.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        payment_info = payos.getPaymentLinkInformation(order.id)
+    except Exception as exc:
+        return Response(
+            {'error': f'Không thể kiểm tra giao dịch PayOS: {str(exc)}'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    payos_status = str(
+        _get_webhook_value(payment_info, 'status') or ''
+    ).upper()
+
+    if payos_status != 'PAID':
+        return Response({
+            'status': 'waiting',
+            'payos_status': payos_status or 'UNKNOWN',
+            'order': OrderSerializer(order).data,
+        })
+
+    payos_order_id = _get_webhook_value(
+        payment_info,
+        'orderCode',
+        'order_code',
+    )
+    payos_amount = _get_webhook_value(payment_info, 'amount')
+    amount_paid = _get_webhook_value(
+        payment_info,
+        'amountPaid',
+        'amount_paid',
+    )
+    amount_remaining = _get_webhook_value(
+        payment_info,
+        'amountRemaining',
+        'amount_remaining',
+    )
+
+    if any(value is None for value in (
+        payos_order_id,
+        payos_amount,
+        amount_paid,
+        amount_remaining,
+    )):
+        return Response(
+            {
+                'error': 'Dữ liệu giao dịch PayOS không đầy đủ.',
+                'code': 'invalid_payos_data',
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    try:
+        payos_order_id = int(payos_order_id)
+        payos_amount = Decimal(str(payos_amount))
+        amount_paid = Decimal(str(amount_paid))
+        amount_remaining = Decimal(str(amount_remaining))
+    except (TypeError, ValueError, InvalidOperation):
+        return Response(
+            {
+                'error': 'Dữ liệu giao dịch PayOS không hợp lệ.',
+                'code': 'invalid_payos_data',
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    if (
+        payos_order_id != order.id
+        or payos_amount != order.total_amount
+        or amount_paid != order.total_amount
+        or amount_remaining != Decimal('0')
+    ):
+        return Response(
+            {
+                'error': (
+                    'Thông tin mã đơn hoặc số tiền trên PayOS '
+                    'không khớp với đơn hàng.'
+                ),
+                'code': 'payos_data_mismatch',
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    transactions = _get_webhook_value(payment_info, 'transactions') or []
+    transaction_id = None
+
+    for payos_transaction in transactions:
+        transaction_id = _get_webhook_value(
+            payos_transaction,
+            'reference',
+            'transactionId',
+            'transaction_id',
+        )
+        if transaction_id:
+            transaction_id = str(transaction_id).strip()
+            break
+
+    if not transaction_id:
+        return Response(
+            {
+                'error': 'PayOS chưa trả về mã giao dịch ngân hàng.',
+                'code': 'missing_payos_reference',
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    try:
+        paid_order, processed = confirm_order_payment(
+            order.id,
+            amount=amount_paid,
+            transaction_id=transaction_id,
+            allow_expired=True,
+        )
+    except OrderLifecycleError as exc:
+        return Response(
+            {'error': exc.message, 'code': exc.code},
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    if processed:
+        transaction.on_commit(
+            lambda paid_order_id=paid_order.id:
+            send_payment_success_email(paid_order_id)
+        )
+
+    paid_order = (
+        Order.objects
+        .select_related('event')
+        .prefetch_related(
+            'items__seat__ticket_type',
+            'tickets__seat__ticket_type',
+        )
+        .get(id=paid_order.id)
+    )
+
+    return Response({
+        'status': 'success',
+        'payos_status': payos_status,
+        'order': OrderSerializer(paid_order).data,
+    })
+
+
 class ReconcilePayOSPaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsCustomerPermission]
 
     def post(self, request, order_id):
         customer = getattr(request.user, 'customer', None)
+        order = get_object_or_404(Order, id=order_id, customer=customer)
+        return _reconcile_payos_order(order)
 
-        try:
-            order = Order.objects.get(id=order_id, customer=customer)
-        except Order.DoesNotExist:
-            return Response(
-                {'error': 'Không tìm thấy đơn hàng.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
 
-        if order.status == OrderStatusEnum.PAID:
-            return Response({
-                'status': 'success',
-                'payos_status': 'PAID',
-                'order': OrderSerializer(order).data,
-            })
+class AdminPaymentReconcileView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
 
-        if order.status not in {
-            OrderStatusEnum.PENDING,
-            OrderStatusEnum.EXPIRED,
-        }:
-            return Response(
-                {
-                    'error': (
-                        'Đơn hàng đã bị hủy hoặc không còn được phép '
-                        'phát hành vé tự động.'
-                    ),
-                    'code': 'invalid_payment_state',
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        if not payos:
-            return Response(
-                {'error': 'PayOS chưa được cấu hình đầy đủ trên server.'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        try:
-            payment_info = payos.getPaymentLinkInformation(order.id)
-        except Exception as exc:
-            return Response(
-                {'error': f'Không thể kiểm tra giao dịch PayOS: {str(exc)}'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        payos_status = str(
-            _get_webhook_value(payment_info, 'status') or ''
-        ).upper()
-
-        if payos_status != 'PAID':
-            return Response({
-                'status': 'waiting',
-                'payos_status': payos_status or 'UNKNOWN',
-                'order': OrderSerializer(order).data,
-            })
-
-        payos_order_id = _get_webhook_value(
-            payment_info,
-            'orderCode',
-            'order_code',
-        )
-        payos_amount = _get_webhook_value(payment_info, 'amount')
-        amount_paid = _get_webhook_value(
-            payment_info,
-            'amountPaid',
-            'amount_paid',
-        )
-        amount_remaining = _get_webhook_value(
-            payment_info,
-            'amountRemaining',
-            'amount_remaining',
-        )
-
-        if any(value is None for value in (
-            payos_order_id,
-            payos_amount,
-            amount_paid,
-            amount_remaining,
-        )):
-            return Response(
-                {
-                    'error': 'Dữ liệu giao dịch PayOS không đầy đủ.',
-                    'code': 'invalid_payos_data',
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        try:
-            payos_order_id = int(payos_order_id)
-            payos_amount = Decimal(str(payos_amount))
-            amount_paid = Decimal(str(amount_paid))
-            amount_remaining = Decimal(str(amount_remaining))
-        except (TypeError, ValueError, InvalidOperation):
-            return Response(
-                {
-                    'error': 'Dữ liệu giao dịch PayOS không hợp lệ.',
-                    'code': 'invalid_payos_data',
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        if (
-            payos_order_id != order.id
-            or payos_amount != order.total_amount
-            or amount_paid != order.total_amount
-            or amount_remaining != Decimal('0')
-        ):
-            return Response(
-                {
-                    'error': (
-                        'Thông tin mã đơn hoặc số tiền trên PayOS '
-                        'không khớp với đơn hàng.'
-                    ),
-                    'code': 'payos_data_mismatch',
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        transactions = _get_webhook_value(payment_info, 'transactions') or []
-        transaction_id = None
-
-        for payos_transaction in transactions:
-            transaction_id = _get_webhook_value(
-                payos_transaction,
-                'reference',
-                'transactionId',
-                'transaction_id',
-            )
-            if transaction_id:
-                transaction_id = str(transaction_id).strip()
-                break
-
-        if not transaction_id:
-            return Response(
-                {
-                    'error': 'PayOS chưa trả về mã giao dịch ngân hàng.',
-                    'code': 'missing_payos_reference',
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        try:
-            paid_order, processed = confirm_order_payment(
-                order.id,
-                amount=amount_paid,
-                transaction_id=transaction_id,
-                allow_expired=True,
-            )
-        except OrderLifecycleError as exc:
-            return Response(
-                {'error': exc.message, 'code': exc.code},
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        if processed:
-            transaction.on_commit(
-                lambda paid_order_id=paid_order.id:
-                send_payment_success_email(paid_order_id)
-            )
-
-        paid_order = (
-            Order.objects
-            .select_related('event')
-            .prefetch_related(
-                'items__seat__ticket_type',
-                'tickets__seat__ticket_type',
-            )
-            .get(id=paid_order.id)
-        )
-
-        return Response({
-            'status': 'success',
-            'payos_status': payos_status,
-            'order': OrderSerializer(paid_order).data,
-        })
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+        return _reconcile_payos_order(order)
 
 
 class PayOSWebhookView(APIView):
