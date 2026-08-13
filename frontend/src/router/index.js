@@ -115,6 +115,15 @@ const router = createRouter({
       }
     },
     {
+      path: '/admin/payments',
+      name: 'admin-payments',
+      component: () => import('@/views/admin/AdminPaymentManagementView.vue'),
+      meta: {
+        requiresAuth: true,
+        role: 'ADMIN'
+      }
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('@/views/account/ProfileView.vue'),

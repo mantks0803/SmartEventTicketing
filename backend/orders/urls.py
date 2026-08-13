@@ -4,6 +4,8 @@ from orders.views import (
     CancelOrderView, CreatePayOSPaymentView, PayOSWebhookView,
     CustomerTicketListView, CheckInView, ReconcilePayOSPaymentView,
     OrganizerEventRevenueReportView,
+    AdminPaymentDetailView, AdminPaymentListView,
+    AdminPaymentReconcileView, AdminPaymentSummaryView,
     AdminRevenueFilterView, AdminRevenueReportView,
 )
 
@@ -26,6 +28,26 @@ urlpatterns = [
         'admin/revenue-report/filters/',
         AdminRevenueFilterView.as_view(),
         name='admin_revenue_report_filters',
+    ),
+    path(
+        'admin/payments/',
+        AdminPaymentListView.as_view(),
+        name='admin_payment_list',
+    ),
+    path(
+        'admin/payments/summary/',
+        AdminPaymentSummaryView.as_view(),
+        name='admin_payment_summary',
+    ),
+    path(
+        'admin/payments/<int:order_id>/',
+        AdminPaymentDetailView.as_view(),
+        name='admin_payment_detail',
+    ),
+    path(
+        'admin/payments/<int:order_id>/reconcile-payos/',
+        AdminPaymentReconcileView.as_view(),
+        name='admin_payment_reconcile',
     ),
     path('<int:pk>/', OrderDetailView.as_view(), name='order_detail'),
     path('<int:pk>/cancel/', CancelOrderView.as_view(), name='cancel_order'),
