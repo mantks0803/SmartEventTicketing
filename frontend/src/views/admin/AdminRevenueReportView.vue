@@ -1,9 +1,9 @@
 <template>
   <div class="admin-revenue-page min-vh-100 py-5">
-    <div class="container">
+    <div class="container-fluid px-3 px-xl-4 px-xxl-5">
       <div class="row g-4 align-items-start">
-        <main class="col-lg-9 order-2 order-lg-1 admin-main-column">
-          <div class="report-header mb-4">
+        <main class="col-xl-10 order-2 order-xl-1 admin-main-column">
+          <div class="report-header mb-3">
             <div>
               <span class="admin-label">QUẢN TRỊ VIÊN</span>
               <h2 class="fw-bold text-slate-900 mb-1 mt-1">Báo cáo doanh thu toàn hệ thống</h2>
@@ -13,112 +13,127 @@
             </div>
           </div>
 
-          <form class="filter-card mb-4" @submit.prevent="fetchReport">
-            <div class="d-flex align-items-center gap-2 mb-3">
-              <i class="bi bi-funnel text-primary"></i>
-              <h5 class="fw-bold mb-0">Bộ lọc báo cáo</h5>
-            </div>
+          <details class="filter-panel mb-3">
+            <summary class="filter-summary">
+              <span class="filter-summary-icon"><i class="bi bi-funnel"></i></span>
+              <span class="filter-summary-text">
+                <strong>Bộ lọc báo cáo</strong>
+                <small>
+                  {{
+                    activeFilterCount > 0
+                      ? `${activeFilterCount} bộ lọc đang áp dụng`
+                      : 'Đang xem toàn hệ thống'
+                  }}
+                </small>
+              </span>
+              <span v-if="activeFilterCount" class="active-filter-badge">
+                {{ activeFilterCount }}
+              </span>
+              <i class="bi bi-chevron-down filter-chevron"></i>
+            </summary>
 
-            <div class="row g-3">
-              <div class="col-md-6 col-xxl-3">
-                <label for="event-filter" class="form-label">Sự kiện</label>
-                <select
-                  id="event-filter"
-                  v-model="filterForm.event_id"
-                  class="form-select"
-                  :disabled="filterLoading || loading"
-                  @change="fetchReport"
-                >
-                  <option value="">Tất cả sự kiện</option>
-                  <option v-for="event in filterOptions.events" :key="event.id" :value="event.id">
-                    {{ event.title }}
-                  </option>
-                </select>
-              </div>
-
-              <div class="col-md-6 col-xxl-3">
-                <label for="organizer-filter" class="form-label"> Ban tổ chức </label>
-                <select
-                  id="organizer-filter"
-                  v-model="filterForm.organizer_id"
-                  class="form-select"
-                  :disabled="filterLoading || loading"
-                  @change="fetchReport"
-                >
-                  <option value="">Tất cả ban tổ chức</option>
-                  <option
-                    v-for="organizer in filterOptions.organizers"
-                    :key="organizer.id"
-                    :value="organizer.id"
+            <form class="filter-body" @submit.prevent="fetchReport">
+              <div class="row g-3">
+              <div class="col-md-6 col-xl-3">
+                  <label for="event-filter" class="form-label">Sự kiện</label>
+                  <select
+                    id="event-filter"
+                    v-model="filterForm.event_id"
+                    class="form-select"
+                    :disabled="filterLoading || loading"
+                    @change="fetchReport"
                   >
-                    {{ organizer.company_name }}
-                  </option>
-                </select>
-              </div>
+                    <option value="">Tất cả sự kiện</option>
+                    <option v-for="event in filterOptions.events" :key="event.id" :value="event.id">
+                      {{ event.title }}
+                    </option>
+                  </select>
+                </div>
 
-              <div class="col-md-6 col-xxl-2">
-                <label for="category-filter" class="form-label">Thể loại</label>
-                <select
-                  id="category-filter"
-                  v-model="filterForm.category"
-                  class="form-select"
-                  :disabled="filterLoading || loading"
-                  @change="fetchReport"
-                >
-                  <option value="">Tất cả thể loại</option>
-                  <option
-                    v-for="category in filterOptions.categories"
-                    :key="category.value"
-                    :value="category.value"
+              <div class="col-md-6 col-xl-3">
+                  <label for="organizer-filter" class="form-label"> Ban tổ chức </label>
+                  <select
+                    id="organizer-filter"
+                    v-model="filterForm.organizer_id"
+                    class="form-select"
+                    :disabled="filterLoading || loading"
+                    @change="fetchReport"
                   >
-                    {{ category.label }}
-                  </option>
-                </select>
+                    <option value="">Tất cả ban tổ chức</option>
+                    <option
+                      v-for="organizer in filterOptions.organizers"
+                      :key="organizer.id"
+                      :value="organizer.id"
+                    >
+                      {{ organizer.company_name }}
+                    </option>
+                  </select>
+                </div>
+
+              <div class="col-md-4 col-xl-2">
+                  <label for="category-filter" class="form-label">Thể loại</label>
+                  <select
+                    id="category-filter"
+                    v-model="filterForm.category"
+                    class="form-select"
+                    :disabled="filterLoading || loading"
+                    @change="fetchReport"
+                  >
+                    <option value="">Tất cả thể loại</option>
+                    <option
+                      v-for="category in filterOptions.categories"
+                      :key="category.value"
+                      :value="category.value"
+                    >
+                      {{ category.label }}
+                    </option>
+                  </select>
+                </div>
+
+              <div class="col-md-4 col-xl-2">
+                  <label for="date-from-filter" class="form-label">Từ ngày</label>
+                  <input
+                    id="date-from-filter"
+                    v-model="filterForm.date_from"
+                    type="date"
+                    class="form-control"
+                    :disabled="loading"
+                    @change="fetchReport"
+                  />
+                </div>
+
+              <div class="col-md-4 col-xl-2">
+                  <label for="date-to-filter" class="form-label">Đến ngày</label>
+                  <input
+                    id="date-to-filter"
+                    v-model="filterForm.date_to"
+                    type="date"
+                    class="form-control"
+                    :disabled="loading"
+                    @change="fetchReport"
+                  />
+                </div>
               </div>
 
-              <div class="col-md-6 col-xxl-2">
-                <label for="date-from-filter" class="form-label">Từ ngày</label>
-                <input
-                  id="date-from-filter"
-                  v-model="filterForm.date_from"
-                  type="date"
-                  class="form-control"
+              <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
+                <button
+                  type="button"
+                  class="btn btn-light border rounded-pill px-4"
                   :disabled="loading"
-                  @change="fetchReport"
-                />
+                  @click="resetFilters"
+                >
+                  <i class="bi bi-x-circle me-2"></i>
+                  Xóa lọc
+                </button>
+
+                <button type="submit" class="btn btn-primary rounded-pill px-4" :disabled="loading">
+                  <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+                  <i v-else class="bi bi-check2-circle me-2"></i>
+                  Áp dụng
+                </button>
               </div>
-
-              <div class="col-md-6 col-xxl-2">
-                <label for="date-to-filter" class="form-label">Đến ngày</label>
-                <input
-                  id="date-to-filter"
-                  v-model="filterForm.date_to"
-                  type="date"
-                  class="form-control"
-                  :disabled="loading"
-                  @change="fetchReport"
-                />
-              </div>
-            </div>
-
-            <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
-              <button
-                type="button"
-                class="btn btn-light border rounded-pill px-4"
-                :disabled="loading"
-                @click="resetFilters"
-              >
-                <i class="bi bi-x-circle me-2"></i>
-                Xóa lọc
-              </button>
-
-              <button type="submit" class="btn btn-primary rounded-pill px-4" :disabled="loading">
-                <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                <i v-else class="bi bi-check2-circle me-2"></i>
-                Áp dụng
-              </button>
-            </div>
-          </form>
+            </form>
+          </details>
 
           <div v-if="loading" class="content-card loading-state">
             <div class="spinner-border text-primary"></div>
@@ -126,7 +141,7 @@
           </div>
 
           <template v-else>
-            <div class="summary-grid mb-4">
+            <div class="summary-grid mb-3">
               <div class="summary-card revenue-summary-card">
                 <div class="summary-icon icon-green">
                   <i class="bi bi-cash-stack"></i>
@@ -184,8 +199,8 @@
               <p class="text-muted mb-0">Chưa có đơn hàng PAID phù hợp với bộ lọc hiện tại.</p>
             </div>
 
-            <div v-else class="row g-4">
-              <div class="col-xxl-7">
+            <div v-else class="row g-3">
+              <div class="col-xl-7">
                 <div class="chart-card">
                   <div class="chart-heading">
                     <div>
@@ -201,7 +216,7 @@
                 </div>
               </div>
 
-              <div class="col-xxl-5">
+              <div class="col-xl-5">
                 <div class="chart-card">
                   <div class="chart-heading">
                     <div>
@@ -222,7 +237,7 @@
                 </div>
               </div>
 
-              <div class="col-xxl-6">
+              <div class="col-xl-6">
                 <div class="chart-card">
                   <div class="chart-heading">
                     <div>
@@ -238,7 +253,7 @@
                 </div>
               </div>
 
-              <div class="col-xxl-6">
+              <div class="col-xl-6">
                 <div class="chart-card">
                   <div class="chart-heading">
                     <div>
@@ -257,7 +272,7 @@
           </template>
         </main>
 
-        <aside class="col-lg-3 order-1 order-lg-2">
+        <aside class="col-xl-2 order-1 order-xl-2">
           <AdminSidebar />
         </aside>
       </div>
@@ -327,6 +342,10 @@ const createEmptyReport = () => ({
 })
 
 const report = ref(createEmptyReport())
+
+const activeFilterCount = computed(
+  () => Object.values(filterForm).filter((value) => value !== '').length,
+)
 
 const categoryLabels = {
   MUSIC: 'Âm nhạc',

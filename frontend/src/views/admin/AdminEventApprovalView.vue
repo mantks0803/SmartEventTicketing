@@ -1,8 +1,8 @@
 <template>
   <div class="admin-page min-vh-100 py-5">
-    <div class="container">
+    <div class="container-fluid px-3 px-xl-4 px-xxl-5">
       <div class="row g-4 align-items-start">
-        <main class="col-lg-9 order-2 order-lg-1 admin-main-column">
+        <main class="col-xl-10 order-2 order-xl-1 admin-main-column">
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
             <div>
               <span class="admin-label">QUẢN TRỊ VIÊN</span>
@@ -236,7 +236,7 @@
           </div>
         </main>
 
-        <aside class="col-lg-3 order-1 order-lg-2">
+        <aside class="col-xl-2 order-1 order-xl-2">
           <AdminSidebar />
         </aside>
       </div>
