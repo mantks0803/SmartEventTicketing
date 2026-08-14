@@ -1,8 +1,8 @@
 <template>
   <div class="admin-payments-page min-vh-100 py-5">
-    <div class="container">
+    <div class="container-fluid px-3 px-xl-4 px-xxl-5">
       <div class="row g-4 align-items-start">
-        <main class="col-lg-9 order-2 order-lg-1">
+        <main class="col-xl-10 order-2 order-xl-1 payment-main-column">
           <div class="page-heading mb-4">
             <div>
               <span class="admin-label">QUẢN TRỊ VIÊN</span>
@@ -157,68 +157,94 @@
               <p class="text-muted mb-0">Hãy thử thay đổi từ khóa hoặc bộ lọc.</p>
             </div>
 
-            <div v-else class="table-responsive">
-              <table class="table align-middle mb-0 payment-table">
-                <thead>
-                  <tr>
-                    <th>Đơn hàng</th>
-                    <th>Khách hàng</th>
-                    <th>Sự kiện</th>
-                    <th>Số tiền</th>
-                    <th>Trạng thái</th>
-                    <th>PayOS / Vé</th>
-                    <th>Cảnh báo</th>
-                    <th class="text-end">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="order in orders" :key="order.id">
-                    <td>
-                      <strong>#{{ order.id }}</strong>
-                      <small>{{ dateTime(order.created_at) }}</small>
-                    </td>
-                    <td>
+            <div v-else class="payment-list">
+              <div class="payment-list-heading">
+                <div>
+                  <strong>Danh sách giao dịch</strong>
+                  <small>Thông tin tổng hợp theo bộ lọc đang chọn</small>
+                </div>
+                <span>{{ number(totalCount) }} kết quả</span>
+              </div>
+
+              <article
+                v-for="order in orders"
+                :key="order.id"
+                class="payment-order-card"
+                :class="{ 'has-warning': order.needs_attention }"
+              >
+                <header class="payment-card-header">
+                  <div class="order-heading">
+                    <span class="order-icon"><i class="bi bi-receipt"></i></span>
+                    <div>
+                      <div class="order-number">Đơn hàng #{{ order.id }}</div>
+                      <span class="order-time">
+                        <i class="bi bi-clock me-1"></i>{{ dateTime(order.created_at) }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="order-badges">
+                    <span v-if="order.needs_attention" class="warning-badge">
+                      <i class="bi bi-exclamation-triangle me-1"></i>Cần kiểm tra
+                    </span>
+                    <span v-else class="normal-badge">
+                      <i class="bi bi-shield-check me-1"></i>Bình thường
+                    </span>
+                    <span class="status-badge" :class="statusClass(order.status)">
+                      {{ statusText(order.status) }}
+                    </span>
+                  </div>
+                </header>
+
+                <div class="payment-card-body">
+                  <section class="payment-info-block">
+                    <span class="info-icon customer-icon"><i class="bi bi-person"></i></span>
+                    <div class="info-content">
+                      <span class="info-label">Khách hàng</span>
                       <strong>{{ order.customer_name }}</strong>
                       <small>{{ order.customer_email }}</small>
-                    </td>
-                    <td>
-                      <strong class="event-title">{{ order.event_title }}</strong>
+                    </div>
+                  </section>
+
+                  <section class="payment-info-block">
+                    <span class="info-icon event-icon"><i class="bi bi-calendar-event"></i></span>
+                    <div class="info-content">
+                      <span class="info-label">Sự kiện</span>
+                      <strong>{{ order.event_title }}</strong>
                       <small>{{ order.organizer_name }}</small>
-                    </td>
-                    <td class="fw-bold text-primary">{{ currency(order.total_amount) }}</td>
-                    <td>
-                      <span class="status-badge" :class="statusClass(order.status)">
-                        {{ statusText(order.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="transaction-text">{{
-                        order.transaction_id || 'Chưa có mã'
-                      }}</span>
-                      <small>{{ order.ticket_count }}/{{ order.item_count }} vé</small>
-                    </td>
-                    <td>
-                      <span
-                        v-if="order.needs_attention"
-                        class="warning-badge"
-                        :title="order.warning_message"
-                      >
-                        <i class="bi bi-exclamation-triangle me-1"></i>Cần kiểm tra
-                      </span>
-                      <span v-else class="normal-badge">Bình thường</span>
-                    </td>
-                    <td class="text-end">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary rounded-pill px-3"
-                        @click="openDetail(order.id)"
-                      >
-                        Chi tiết
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                  </section>
+
+                  <section class="amount-block">
+                    <span class="info-label">Tổng thanh toán</span>
+                    <strong>{{ currency(order.total_amount) }}</strong>
+                    <small>
+                      <i class="bi bi-ticket-perforated me-1"></i>
+                      {{ order.ticket_count }}/{{ order.item_count }} vé đã phát hành
+                    </small>
+                  </section>
+                </div>
+
+                <div v-if="order.needs_attention" class="inline-warning">
+                  <i class="bi bi-exclamation-circle-fill"></i>
+                  <span>{{ order.warning_message }}</span>
+                </div>
+
+                <footer class="payment-card-footer">
+                  <div class="transaction-row">
+                    <span class="transaction-label">Mã giao dịch PayOS</span>
+                    <code>{{ order.transaction_id || 'Chưa có mã giao dịch' }}</code>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn btn-outline-primary rounded-pill px-4 detail-button"
+                    @click="openDetail(order.id)"
+                  >
+                    Xem chi tiết<i class="bi bi-arrow-right ms-2"></i>
+                  </button>
+                </footer>
+              </article>
             </div>
           </section>
 
@@ -229,7 +255,7 @@
           />
         </main>
 
-        <aside class="col-lg-3 order-1 order-lg-2">
+        <aside class="col-xl-2 order-1 order-xl-2">
           <AdminSidebar />
         </aside>
       </div>

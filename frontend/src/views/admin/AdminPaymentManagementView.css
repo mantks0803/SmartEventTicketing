@@ -3,6 +3,10 @@
   color: #0f172a;
 }
 
+.payment-main-column {
+  min-width: 0;
+}
+
 .page-heading {
   display: flex;
   align-items: center;
@@ -126,42 +130,209 @@
   font-size: 2.5rem;
 }
 
-.payment-table {
-  min-width: 1120px;
-}
-
-.payment-table th {
-  padding: 14px 12px;
-  border-bottom-color: #e2e8f0;
-  color: #64748b;
+.payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
   background: #f8fafc;
-  font-size: 0.72rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
-.payment-table td {
-  padding: 14px 12px;
-  border-bottom-color: #f1f5f9;
-  font-size: 0.82rem;
+.payment-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 2px 3px;
 }
 
-.payment-table td strong,
-.payment-table td small {
+.payment-list-heading strong,
+.payment-list-heading small {
   display: block;
 }
 
-.payment-table td small {
-  margin-top: 3px;
+.payment-list-heading strong {
+  color: #1e293b;
+  font-size: 0.9rem;
+}
+
+.payment-list-heading small {
+  margin-top: 2px;
   color: #64748b;
   font-size: 0.7rem;
 }
 
-.event-title {
-  max-width: 180px;
+.payment-list-heading > span {
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 0.7rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.payment-order-card {
   overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.payment-order-card:hover {
+  border-color: #bfdbfe;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.payment-order-card.has-warning {
+  border-color: #fecaca;
+}
+
+.payment-card-header,
+.payment-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.payment-card-header {
+  padding: 15px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.order-heading,
+.order-badges,
+.payment-info-block,
+.transaction-row {
+  display: flex;
+  align-items: center;
+}
+
+.order-heading {
+  min-width: 0;
+  gap: 11px;
+}
+
+.order-icon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.order-number {
+  color: #0f172a;
+  font-size: 0.94rem;
+  font-weight: 750;
+}
+
+.order-time {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.order-badges {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.payment-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(170px, 0.65fr);
+  gap: 0;
+  padding: 18px;
+}
+
+.payment-info-block {
+  min-width: 0;
+  gap: 11px;
+  padding-right: 18px;
+}
+
+.payment-info-block + .payment-info-block,
+.amount-block {
+  padding-left: 18px;
+  border-left: 1px solid #e2e8f0;
+}
+
+.info-icon {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.customer-icon {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.event-icon {
+  color: #7e22ce;
+  background: #f3e8ff;
+}
+
+.info-content,
+.amount-block {
+  min-width: 0;
+}
+
+.info-label {
+  display: block;
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 0.67rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.info-content strong,
+.info-content small,
+.amount-block strong,
+.amount-block small {
+  display: block;
+}
+
+.info-content strong {
+  overflow: hidden;
+  color: #1e293b;
+  font-size: 0.84rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.info-content small,
+.amount-block small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amount-block strong {
+  color: #1d4ed8;
+  font-size: 1.08rem;
 }
 
 .status-badge,
@@ -202,13 +373,55 @@
   background: #ecfdf5;
 }
 
-.transaction-text {
-  display: block;
-  max-width: 170px;
-  overflow: hidden;
-  font-family: monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.inline-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 18px 15px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #991b1b;
+  background: #fef2f2;
+  font-size: 0.76rem;
+}
+
+.inline-warning i {
+  margin-top: 1px;
+  flex: 0 0 auto;
+}
+
+.payment-card-footer {
+  padding: 12px 18px;
+  border-top: 1px solid #f1f5f9;
+  background: #fcfdff;
+}
+
+.transaction-row {
+  min-width: 0;
+  flex: 1;
+  gap: 10px;
+}
+
+.transaction-label {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.transaction-row code {
+  min-width: 0;
+  padding: 4px 8px;
+  overflow-wrap: anywhere;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  color: #334155;
+  background: #f8fafc;
+  font-size: 0.7rem;
+}
+
+.detail-button {
+  flex: 0 0 auto;
+  font-size: 0.78rem;
 }
 
 .payment-modal {
@@ -304,6 +517,18 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .payment-card-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .amount-block {
+    grid-column: 1 / -1;
+    margin-top: 16px;
+    padding: 16px 0 0;
+    border-top: 1px solid #e2e8f0;
+    border-left: 0;
+  }
+
   .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -326,6 +551,61 @@
   .payment-summary-grid,
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .payment-list {
+    padding: 12px;
+  }
+
+  .payment-list-heading {
+    align-items: flex-start;
+  }
+
+  .payment-card-header,
+  .payment-card-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .order-badges {
+    justify-content: flex-start;
+  }
+
+  .payment-card-body {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .payment-info-block,
+  .payment-info-block + .payment-info-block,
+  .amount-block {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .payment-info-block + .payment-info-block,
+  .amount-block {
+    padding-top: 15px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .info-content strong,
+  .info-content small {
+    overflow: visible;
+    text-overflow: initial;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .transaction-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .detail-button {
+    width: 100%;
   }
 
   .filter-actions {
