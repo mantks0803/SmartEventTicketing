@@ -8,20 +8,53 @@
               <span class="admin-label">QUẢN TRỊ VIÊN</span>
               <h2 class="fw-bold mb-1 mt-1">Quản lý thanh toán</h2>
               <p class="text-muted mb-0">
-                Theo dõi đơn hàng, phát hiện bất thường và đối soát lại với PayOS.
+                {{
+                  activeSection === 'transactions'
+                    ? 'Theo dõi đơn hàng, phát hiện bất thường và đối soát lại với PayOS.'
+                    : 'Xem doanh thu và xác nhận quyết toán mô phỏng cho ban tổ chức.'
+                }}
               </p>
             </div>
 
             <button
               type="button"
               class="btn btn-outline-primary rounded-pill px-4"
-              :disabled="loading"
-              @click="refreshData"
+              :disabled="currentLoading"
+              @click="refreshCurrentSection"
             >
               <i class="bi bi-arrow-clockwise me-2"></i>Làm mới
             </button>
           </div>
 
+          <div class="payment-section-tabs mb-4" role="tablist" aria-label="Nội dung thanh toán">
+            <button
+              type="button"
+              class="payment-section-tab"
+              :class="{ active: activeSection === 'transactions' }"
+              @click="changeSection('transactions')"
+            >
+              <span class="section-tab-icon"><i class="bi bi-credit-card"></i></span>
+              <span>
+                <strong>Giao dịch PayOS</strong>
+                <small>Đơn hàng và đối soát</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="payment-section-tab"
+              :class="{ active: activeSection === 'payouts' }"
+              @click="changeSection('payouts')"
+            >
+              <span class="section-tab-icon"><i class="bi bi-wallet2"></i></span>
+              <span>
+                <strong>Quyết toán BTC</strong>
+                <small>Xác nhận doanh thu sự kiện</small>
+              </span>
+            </button>
+          </div>
+
+          <template v-if="activeSection === 'transactions'">
           <div class="payment-summary-grid mb-4">
             <div class="summary-card">
               <span class="summary-icon icon-blue"><i class="bi bi-receipt"></i></span>
@@ -253,6 +286,9 @@
             :total-pages="totalPages"
             @page-change="changePage"
           />
+          </template>
+
+          <AdminPayoutPanel v-else ref="payoutPanelRef" />
         </main>
 
         <aside class="col-xl-2 order-1 order-xl-2">
@@ -419,10 +455,13 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { Modal } from 'bootstrap'
 import Swal from 'sweetalert2'
 
+import AdminPayoutPanel from '@/components/admin/AdminPayoutPanel.vue'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
 import PaginationControls from '@/components/PaginationControls.vue'
 import apiClient from '@/services/api'
 
+const activeSection = ref('transactions')
+const payoutPanelRef = ref(null)
 const orders = ref([])
 const summary = ref({})
 const filterOptions = ref({ events: [], organizers: [] })
@@ -457,6 +496,19 @@ const orderStatuses = [
 ]
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize)))
+const currentLoading = computed(() => activeSection.value === 'transactions' && loading.value)
+
+const changeSection = (section) => {
+  activeSection.value = section
+}
+
+const refreshCurrentSection = () => {
+  if (activeSection.value === 'transactions') {
+    refreshData()
+    return
+  }
+  payoutPanelRef.value?.refreshData()
+}
 
 const buildParams = (includePage = false) => {
   const params = {}

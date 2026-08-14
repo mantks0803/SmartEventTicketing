@@ -1,6 +1,7 @@
+from django.utils import timezone
 from rest_framework import serializers
 
-from events.models import EventCategoryEnum
+from events.models import EventCategoryEnum, EventStatusEnum
 from orders.models import (
     Order,
     OrderItem,
@@ -411,3 +412,98 @@ class AdminPaymentSummarySerializer(serializers.Serializer):
     cancelled_expired_orders = serializers.IntegerField()
     needs_attention = serializers.IntegerField()
     total_revenue = serializers.DecimalField(max_digits=16, decimal_places=2)
+
+
+class AdminPayoutQuerySerializer(serializers.Serializer):
+    """Kiểm tra các bộ lọc ở tab quyết toán cho Ban tổ chức."""
+
+    search = serializers.CharField(required=False, allow_blank=True)
+    status = serializers.ChoiceField(
+        required=False,
+        choices=['PENDING', 'COMPLETED'],
+    )
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    page = serializers.IntegerField(required=False, min_value=1)
+    page_size = serializers.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=100,
+    )
+
+    def validate(self, data):
+        date_from = data.get('date_from')
+        date_to = data.get('date_to')
+
+        if date_from and date_to and date_from > date_to:
+            raise serializers.ValidationError({
+                'date_to': 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+            })
+
+        return data
+
+
+class AdminPayoutEventSerializer(serializers.Serializer):
+    """Thông tin gọn của một sự kiện trong danh sách quyết toán."""
+
+    event_id = serializers.IntegerField(source='id', read_only=True)
+    event_title = serializers.CharField(source='title', read_only=True)
+    event_thumbnail = serializers.CharField(source='thumbnail', read_only=True)
+    organizer_id = serializers.IntegerField(read_only=True)
+    organizer_name = serializers.CharField(
+        source='organizer.company_name',
+        read_only=True,
+    )
+    start_time = serializers.DateTimeField(read_only=True)
+    event_status = serializers.CharField(source='status', read_only=True)
+    is_payout_completed = serializers.BooleanField(read_only=True)
+    paid_orders = serializers.IntegerField(read_only=True)
+    sold_tickets = serializers.IntegerField(read_only=True)
+    checked_in_tickets = serializers.IntegerField(read_only=True)
+    total_revenue = serializers.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+        read_only=True,
+    )
+    can_settle = serializers.SerializerMethodField()
+
+    def get_can_settle(self, event):
+        return bool(
+            event.status == EventStatusEnum.PUBLISHED
+            and event.start_time <= timezone.now()
+            and event.paid_orders > 0
+            and not event.is_payout_completed
+        )
+
+
+class AdminPayoutSummarySerializer(serializers.Serializer):
+    pending_events = serializers.IntegerField()
+    pending_revenue = serializers.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+    )
+    completed_events = serializers.IntegerField()
+    completed_revenue = serializers.DecimalField(
+        max_digits=16,
+        decimal_places=2,
+    )
+
+
+class AdminPayoutTransactionSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+    customer_name = serializers.CharField()
+    customer_email = serializers.EmailField()
+    ticket_count = serializers.IntegerField()
+    total_amount = serializers.DecimalField(max_digits=16, decimal_places=2)
+    created_at = serializers.DateTimeField()
+
+
+class AdminPayoutEventDetailSerializer(AdminPayoutEventSerializer):
+    revenue_by_ticket_type = RevenueByTicketTypeSerializer(
+        many=True,
+        read_only=True,
+    )
+    transactions = AdminPayoutTransactionSerializer(
+        many=True,
+        read_only=True,
+    )

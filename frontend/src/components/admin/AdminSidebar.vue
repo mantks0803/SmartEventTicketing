@@ -67,7 +67,7 @@
         </span>
         <span>
           <strong>Quản lý thanh toán</strong>
-          <small>Giao dịch và đối soát</small>
+          <small>Giao dịch và quyết toán</small>
         </span>
         <i class="bi bi-chevron-right admin-menu-arrow"></i>
       </RouterLink>
