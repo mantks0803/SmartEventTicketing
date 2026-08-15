@@ -6,6 +6,8 @@ from orders.views import (
     OrganizerEventRevenueReportView,
     AdminPaymentDetailView, AdminPaymentListView,
     AdminPaymentReconcileView, AdminPaymentSummaryView,
+    AdminPayoutCompleteView, AdminPayoutDetailView,
+    AdminPayoutListView, AdminPayoutSummaryView,
     AdminRevenueFilterView, AdminRevenueReportView,
 )
 
@@ -48,6 +50,26 @@ urlpatterns = [
         'admin/payments/<int:order_id>/reconcile-payos/',
         AdminPaymentReconcileView.as_view(),
         name='admin_payment_reconcile',
+    ),
+    path(
+        'admin/payouts/',
+        AdminPayoutListView.as_view(),
+        name='admin_payout_list',
+    ),
+    path(
+        'admin/payouts/summary/',
+        AdminPayoutSummaryView.as_view(),
+        name='admin_payout_summary',
+    ),
+    path(
+        'admin/payouts/<int:event_id>/',
+        AdminPayoutDetailView.as_view(),
+        name='admin_payout_detail',
+    ),
+    path(
+        'admin/payouts/<int:event_id>/complete/',
+        AdminPayoutCompleteView.as_view(),
+        name='admin_payout_complete',
     ),
     path('<int:pk>/', OrderDetailView.as_view(), name='order_detail'),
     path('<int:pk>/cancel/', CancelOrderView.as_view(), name='cancel_order'),

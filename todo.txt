@@ -247,6 +247,7 @@ admin chuc nang....
 test test test test 
 
 fake data for revenue?
+selenium?
 ----------------
 
 Dashboard và báo cáo lấy dữ liệu API thật.

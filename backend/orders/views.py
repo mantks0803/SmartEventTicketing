@@ -3,8 +3,19 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, F, Prefetch, Q, Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import (
+    Count,
+    DecimalField,
+    F,
+    IntegerField,
+    OuterRef,
+    Prefetch,
+    Q,
+    Subquery,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce, TruncMonth
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -27,6 +38,10 @@ from orders.models import (
     Ticket,
 )
 from orders.serializers import (
+    AdminPayoutEventDetailSerializer,
+    AdminPayoutEventSerializer,
+    AdminPayoutQuerySerializer,
+    AdminPayoutSummarySerializer,
     AdminPaymentDetailSerializer,
     AdminPaymentListSerializer,
     AdminPaymentQuerySerializer,
@@ -188,6 +203,89 @@ def _attention_query():
             & ~Q(ticket_count=F('item_count'))
         )
     )
+
+
+def _admin_payout_event_queryset():
+    """Sự kiện đã diễn ra và có doanh thu PAID để Admin quyết toán."""
+    paid_order_stats = (
+        Order.objects
+        .filter(
+            event_id=OuterRef('pk'),
+            status=OrderStatusEnum.PAID,
+        )
+        .values('event_id')
+        .annotate(
+            order_count=Count('id'),
+            revenue=Sum('total_amount'),
+        )
+    )
+    paid_ticket_stats = (
+        Ticket.objects
+        .filter(
+            order__event_id=OuterRef('pk'),
+            order__status=OrderStatusEnum.PAID,
+        )
+        .values('order__event_id')
+        .annotate(
+            ticket_count=Count('id'),
+            check_in_count=Count('id', filter=Q(is_checked_in=True)),
+        )
+    )
+
+    # Subquery giữ tổng doanh thu chính xác khi cùng lúc đếm vé.
+    return (
+        Event.objects
+        .filter(
+            status=EventStatusEnum.PUBLISHED,
+            start_time__lte=timezone.now(),
+        )
+        .select_related('organizer__user')
+        .annotate(
+            paid_orders=Coalesce(
+                Subquery(paid_order_stats.values('order_count')[:1]),
+                Value(0),
+                output_field=IntegerField(),
+            ),
+            total_revenue=Coalesce(
+                Subquery(paid_order_stats.values('revenue')[:1]),
+                Value(Decimal('0.00')),
+                output_field=DecimalField(max_digits=16, decimal_places=2),
+            ),
+            sold_tickets=Coalesce(
+                Subquery(paid_ticket_stats.values('ticket_count')[:1]),
+                Value(0),
+                output_field=IntegerField(),
+            ),
+            checked_in_tickets=Coalesce(
+                Subquery(paid_ticket_stats.values('check_in_count')[:1]),
+                Value(0),
+                output_field=IntegerField(),
+            ),
+        )
+        .filter(paid_orders__gt=0)
+    )
+
+
+def _apply_admin_payout_filters(queryset, filters):
+    search = filters.get('search', '').strip()
+    if search:
+        queryset = queryset.filter(
+            Q(title__icontains=search)
+            | Q(organizer__company_name__icontains=search)
+            | Q(organizer__user__name__icontains=search)
+        )
+
+    if filters.get('status') == 'PENDING':
+        queryset = queryset.filter(is_payout_completed=False)
+    elif filters.get('status') == 'COMPLETED':
+        queryset = queryset.filter(is_payout_completed=True)
+
+    if filters.get('date_from'):
+        queryset = queryset.filter(start_time__date__gte=filters['date_from'])
+    if filters.get('date_to'):
+        queryset = queryset.filter(start_time__date__lte=filters['date_to'])
+
+    return queryset
 
 
 class HoldSeatsView(APIView):
@@ -1023,6 +1121,205 @@ class AdminPaymentReconcileView(APIView):
     def post(self, request, order_id):
         order = get_object_or_404(Order, id=order_id)
         return _reconcile_payos_order(order)
+
+
+class AdminPayoutListView(generics.ListAPIView):
+    """Danh sách sự kiện đủ dữ liệu để theo dõi quyết toán."""
+
+    serializer_class = AdminPayoutEventSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+    pagination_class = AdminPaymentPagination
+
+    def list(self, request, *args, **kwargs):
+        query_serializer = AdminPayoutQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        self.validated_filters = query_serializer.validated_data
+        return super().list(request, *args, **kwargs)
+
+    def get_queryset(self):
+        queryset = _admin_payout_event_queryset()
+        queryset = _apply_admin_payout_filters(
+            queryset,
+            getattr(self, 'validated_filters', {}),
+        )
+        return queryset.order_by('-start_time', '-id')
+
+
+class AdminPayoutSummaryView(APIView):
+    """Các card tổng quan ở đầu tab quyết toán."""
+
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+
+    def get(self, request):
+        query_serializer = AdminPayoutQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        events = _apply_admin_payout_filters(
+            _admin_payout_event_queryset(),
+            query_serializer.validated_data,
+        )
+
+        summary = events.aggregate(
+            pending_events=Count(
+                'id',
+                filter=Q(is_payout_completed=False),
+            ),
+            pending_revenue=Sum(
+                'total_revenue',
+                filter=Q(is_payout_completed=False),
+            ),
+            completed_events=Count(
+                'id',
+                filter=Q(is_payout_completed=True),
+            ),
+            completed_revenue=Sum(
+                'total_revenue',
+                filter=Q(is_payout_completed=True),
+            ),
+        )
+        summary['pending_revenue'] = (
+            summary['pending_revenue'] or Decimal('0.00')
+        )
+        summary['completed_revenue'] = (
+            summary['completed_revenue'] or Decimal('0.00')
+        )
+
+        serializer = AdminPayoutSummarySerializer(summary)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminPayoutDetailView(APIView):
+    """Chi tiết doanh thu và các đơn PAID của một sự kiện."""
+
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+
+    def get(self, request, event_id):
+        event = get_object_or_404(
+            _admin_payout_event_queryset(),
+            id=event_id,
+        )
+
+        # Giá bán lấy từ OrderItem để không bị đổi theo giá vé hiện tại.
+        ticket_types = (
+            event.ticket_types
+            .annotate(
+                sold_quantity=Count(
+                    'order_items',
+                    filter=Q(
+                        order_items__order__status=OrderStatusEnum.PAID,
+                        order_items__order__event=event,
+                    ),
+                ),
+                report_revenue=Sum(
+                    'order_items__unit_price',
+                    filter=Q(
+                        order_items__order__status=OrderStatusEnum.PAID,
+                        order_items__order__event=event,
+                    ),
+                ),
+            )
+            .order_by('name')
+        )
+        event.revenue_by_ticket_type = [
+            {
+                'ticket_type_id': ticket_type.id,
+                'ticket_type_name': ticket_type.name,
+                'sold_quantity': ticket_type.sold_quantity,
+                'revenue': ticket_type.report_revenue or Decimal('0.00'),
+            }
+            for ticket_type in ticket_types
+        ]
+
+        paid_orders = (
+            Order.objects
+            .filter(event=event, status=OrderStatusEnum.PAID)
+            .select_related('customer__user')
+            .annotate(ticket_count=Count('tickets'))
+            .order_by('-created_at', '-id')
+        )
+        event.transactions = [
+            {
+                'order_id': order.id,
+                'customer_name': order.customer.user.name,
+                'customer_email': order.customer.user.email,
+                'ticket_count': order.ticket_count,
+                'total_amount': order.total_amount,
+                'created_at': order.created_at,
+            }
+            for order in paid_orders
+        ]
+
+        serializer = AdminPayoutEventDetailSerializer(event)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminPayoutCompleteView(APIView):
+    """Xác nhận quyết toán mô phỏng, không gọi API chuyển tiền thật."""
+
+    permission_classes = [permissions.IsAuthenticated, IsAdminPermission]
+
+    @transaction.atomic
+    def post(self, request, event_id):
+        event = get_object_or_404(
+            Event.objects.select_for_update(),
+            id=event_id,
+        )
+
+        if event.status != EventStatusEnum.PUBLISHED:
+            return Response(
+                {
+                    'error': 'Chỉ sự kiện đã được phát hành mới được quyết toán.',
+                    'code': 'event_not_published',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        if event.start_time > timezone.now():
+            return Response(
+                {
+                    'error': 'Sự kiện chưa diễn ra nên chưa thể quyết toán.',
+                    'code': 'event_not_started',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        paid_order_count = Order.objects.filter(
+            event=event,
+            status=OrderStatusEnum.PAID,
+        ).count()
+        if paid_order_count == 0:
+            return Response(
+                {
+                    'error': 'Sự kiện chưa có đơn hàng PAID để quyết toán.',
+                    'code': 'no_paid_orders',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        if event.is_payout_completed:
+            return Response(
+                {
+                    'error': 'Sự kiện này đã được xác nhận quyết toán.',
+                    'code': 'payout_already_completed',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Chỉ lưu trạng thái mô phỏng, không chuyển tiền và không đổi Event.status.
+        event.is_payout_completed = True
+        event.save(update_fields=['is_payout_completed', 'updated_at'])
+        event = get_object_or_404(_admin_payout_event_queryset(), id=event.id)
+
+        return Response(
+            {
+                'status': 'success',
+                'message': (
+                    'Đã ghi nhận quyết toán mô phỏng. '
+                    'Hệ thống không thực hiện chuyển tiền thật.'
+                ),
+                'event': AdminPayoutEventSerializer(event).data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class PayOSWebhookView(APIView):
