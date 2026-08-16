@@ -149,4 +149,17 @@ cloudinary.config(
     secure=True
 )
 
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
+AI_CHAT_MODEL = os.getenv('AI_CHAT_MODEL', 'gemini-2.5-flash')
+AI_EMBEDDING_MODEL = os.getenv(
+    'AI_EMBEDDING_MODEL',
+    'gemini-embedding-2',
+)
+AI_EMBEDDING_DIMENSIONS = int(
+    os.getenv('AI_EMBEDDING_DIMENSIONS', '768')
+)
+AI_MAX_CONTEXT_CHUNKS = int(
+    os.getenv('AI_MAX_CONTEXT_CHUNKS', '4')
+)
+
 
