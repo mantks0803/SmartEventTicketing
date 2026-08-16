@@ -22,7 +22,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:0.8.6-pg16
         env:
           POSTGRES_DB: smartticket_ci
           POSTGRES_USER: postgres
@@ -46,6 +46,11 @@ jobs:
       EMAIL_BACKEND: django.core.mail.backends.locmem.EmailBackend
       DEFAULT_FROM_EMAIL: noreply@smartticket.test
       FRONTEND_URL: http://localhost:5173
+      GOOGLE_API_KEY: test-key
+      AI_CHAT_MODEL: gemini-2.5-flash
+      AI_EMBEDDING_MODEL: gemini-embedding-2
+      AI_EMBEDDING_DIMENSIONS: "768"
+      AI_MAX_CONTEXT_CHUNKS: "4"
 
     steps:
       - name: Lấy source code
