@@ -31,7 +31,6 @@ class Command(BaseCommand):
         services = []
         service_codes = set()
 
-        # Kiểm tra toàn bộ dữ liệu trước khi ghi vào database.
         for index, raw_service in enumerate(raw_services, start=1):
             service = self._validate_service(raw_service, index)
 
