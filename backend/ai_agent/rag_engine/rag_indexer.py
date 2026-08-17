@@ -205,7 +205,7 @@ def rebuild_rag_index(
                 f'({len(chunks)} đoạn)...'
             )
 
-        embedding_texts = [
+        embedding_texts = [ 
             f'{document["title"]}\n\n{chunk}'
             for chunk in chunks
         ]

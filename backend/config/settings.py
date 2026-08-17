@@ -150,7 +150,7 @@ cloudinary.config(
 )
 
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY', '')
-AI_CHAT_MODEL = os.getenv('AI_CHAT_MODEL', 'gemini-2.5-flash')
+AI_CHAT_MODEL = os.getenv('AI_CHAT_MODEL', 'gemini-3.6-flash')
 AI_EMBEDDING_MODEL = os.getenv(
     'AI_EMBEDDING_MODEL',
     'gemini-embedding-2',
