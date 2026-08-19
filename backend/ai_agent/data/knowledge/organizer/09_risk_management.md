@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Quy trình SmartEventTicketing và hướng dẫn nội bộ phục vụ đồ án  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -80,11 +80,13 @@ SmartEventTicketing đã xử lý một số rủi ro:
 
 - Ghế được khóa khi tạo đơn để chống hai khách cùng mua.
 - Mỗi đơn giữ ghế 10 phút.
-- Đơn hết hạn giải phóng ghế.
+- Đơn hết hạn giải phóng ghế khi luồng dọn đơn được gọi.
 - Một Customer chọn tối đa 5 ghế mỗi đơn.
 - Event phải `PUBLISHED` và chưa bắt đầu mới được giữ ghế.
 
 Organizer vẫn cần theo dõi ghế đã bán, ghế đang giữ và sức chứa thực tế. Ghế `LOCKED` không được tính là đã bán.
+
+Project demo không có worker dọn đơn chạy nền liên tục. Việc hết hạn được xử lý khi có request liên quan hoặc khi chạy lệnh `python manage.py release_expired_orders`; khi triển khai thật cần đặt lịch cho lệnh này.
 
 ## Rủi ro thanh toán
 
@@ -96,7 +98,7 @@ Các tình huống gồm:
 - Giao dịch đến sau khi đơn hết hạn.
 - Ghế đã được cấp cho đơn khác trước khi giao dịch muộn được xử lý.
 
-Backend đối soát mã đơn, số tiền, số tiền còn lại và mã tham chiếu. Logic phát hành vé có chống lặp. Nếu PayOS đã nhận tiền nhưng ghế không còn an toàn, hệ thống yêu cầu Admin kiểm tra và khách không nên thanh toán lại.
+Backend đối soát mã đơn, số tiền, số tiền còn lại và mã tham chiếu. Logic phát hành vé có chống lặp. Nếu PayOS đã nhận tiền nhưng ghế không còn an toàn, API trả cảnh báo cần kiểm tra thủ công và khách không nên thanh toán lại. Project hiện chưa có field `manual_review`, hàng đợi xử lý thủ công hoặc quy trình hoàn tiền thật trong database.
 
 ## Rủi ro check-in
 
@@ -139,4 +141,3 @@ Chatbot phải yêu cầu xác minh chuyên môn khi câu hỏi liên quan trự
 - Cam kết hợp đồng và bảo hiểm.
 
 Chatbot có thể đưa checklist nhưng không được khẳng định sự kiện đã đáp ứng đầy đủ quy định.
-

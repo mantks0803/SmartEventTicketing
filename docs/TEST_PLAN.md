@@ -1,122 +1,127 @@
-# Kế hoạch kiểm thử Smart Event Ticketing
+# Kế hoạch kiểm thử SmartEventTicketing
 
 ## 1. Mục tiêu
 
-Kế hoạch này kiểm tra các luồng quan trọng nhất của hệ thống: xác thực và phân quyền, danh sách sự kiện, chọn và giữ ghế, thanh toán PayOS, phát hành vé QR và soát vé.
+Kế hoạch kiểm tra các luồng cốt lõi của Customer, Organizer, Admin và AI Agent: xác thực, phân quyền, sự kiện, ghế, thanh toán, vé QR, báo cáo, quản trị và chatbot RAG.
 
 ## 2. Phạm vi
 
-- Backend: Django 6, Django REST Framework và PostgreSQL.
-- Frontend: Vue 3 được kiểm tra khả năng biên dịch bằng Vite.
-- PayOS, Cloudinary và email được mock hoặc dùng memory backend trong test tự động.
-- Không chuyển khoản thật, không upload ảnh thật và không gửi email thật khi chạy test.
-- Chưa bao gồm kiểm thử tải lớn, kiểm thử trình duyệt tự động và triển khai production.
+- Backend Django REST Framework và PostgreSQL/pgvector.
+- Frontend Vue 3 được kiểm tra khả năng build production bằng Vite.
+- PayOS, Cloudinary, email và Gemini được mock trong test tự động.
+- Race condition dùng PostgreSQL thật để kiểm tra `select_for_update()`.
+- RAG evaluation thật tách khỏi CI vì sử dụng quota Gemini.
+- Chưa bao gồm load test, Selenium/E2E trình duyệt, deploy production và chuyển tiền thật.
 
-## 3. Môi trường và dữ liệu mẫu
+## 3. Môi trường chuẩn
 
-- Python 3.12.
-- Node.js 22.18.0.
-- PostgreSQL 16 trong GitHub Actions.
-- Customer A, Customer B, Organizer A, Organizer B và Admin.
-- Event ở ba trạng thái `PENDING`, `PUBLISHED`, `CANCELLED`.
-- Loại vé VIP giá 100.000 đồng và các ghế A-1 đến A-6.
-- Không dùng `sleep()` để chờ 10 phút; test đưa `expires_at` về quá khứ.
+- CI: Python 3.12, Node.js 22.18.0, PostgreSQL 16 với pgvector.
+- Local gần nhất: Python 3.14.6, Node.js 24.14.1, PostgreSQL 18.4.
+- Event ở các trạng thái `PENDING`, `PUBLISHED`, `CANCELLED`.
+- Order ở các trạng thái `PENDING`, `PAID`, `CANCELLED`, `EXPIRED`, `REFUNDED`.
+- Customer A/B, Organizer A/B và Admin để kiểm tra ownership/IDOR.
+- Test không dùng `sleep()`; thời gian giữ ghế được đưa trực tiếp về quá khứ.
 
 ## 4. Điều kiện đạt
 
-- Toàn bộ test backend phải pass.
-- Chạy trong thư mục `backend/`, lệnh `python manage.py check` không báo lỗi.
-- Không có migration chưa tạo.
-- `npm run build` hoàn tất mà không có lỗi biên dịch.
-- Race condition phải có đúng một đơn giữ ghế thành công.
+- `python manage.py check` không có lỗi.
+- `python manage.py makemigrations --check --dry-run` báo không có thay đổi.
+- Toàn bộ backend tests pass.
+- `npm run build` hoàn tất không có lỗi biên dịch.
+- Không có request test nào gọi PayOS, Cloudinary, SMTP hoặc Gemini thật.
+- Race condition chỉ cho đúng một Customer giữ được cùng một ghế.
 
 ## 5. Ma trận test case
 
-| STT | Chức năng | Mô tả kịch bản | Các bước thực hiện | Kết quả kỳ vọng |
-|---:|---|---|---|---|
-| TC-01 | Đăng ký Customer | Đăng ký với dữ liệu hợp lệ | Gửi `POST /api/auth/register/customer/` với họ tên, email, số điện thoại và mật khẩu | Trả 201; tạo `User` loại CUSTOMER và hồ sơ `Customer`; mật khẩu được mã hóa |
-| TC-02 | Đăng ký Organizer | Đăng ký ban tổ chức hợp lệ | Gửi `POST /api/auth/register/organizer/` kèm tên công ty và tài khoản ngân hàng | Trả 201; tạo `User` loại ORGANIZER và hồ sơ `Organizer` |
-| TC-03 | Đăng ký | Email đã tồn tại | Tạo một tài khoản, sau đó đăng ký tài khoản mới bằng cùng email | Trả 400 và không tạo thêm tài khoản trùng |
-| TC-04 | Đăng nhập | Đăng nhập bằng email và mật khẩu đúng | Gửi `POST /api/auth/login/` | Trả access token, refresh token và đúng role |
-| TC-05 | Đăng nhập | Sai mật khẩu hoặc tài khoản `is_active=False` | Gửi thông tin đăng nhập không hợp lệ | Trả 400 và không cấp token |
-| TC-06 | Phân quyền | Customer gọi API của Organizer hoặc Admin | Xác thực Customer rồi gọi API tạo sự kiện, upload ảnh hoặc duyệt sự kiện | Trả 403; dữ liệu không thay đổi |
-| TC-07 | Danh sách sự kiện | Chỉ hiển thị sự kiện đã duyệt | Tạo event PUBLISHED, PENDING và CANCELLED rồi gọi `GET /api/events/` | Chỉ trả event PUBLISHED |
-| TC-08 | Phân trang | Danh sách có hơn 12 sự kiện | Gọi lần lượt `?page=1` và `?page=2` | `count`, `next` và số bản ghi từng trang chính xác |
-| TC-09 | Tìm kiếm | Tìm theo tiêu đề hoặc địa điểm | Gọi `GET /api/events/?search=...` | Chỉ trả các event có tiêu đề hoặc địa điểm phù hợp |
-| TC-10 | Lọc danh mục | Lọc theo MUSIC hoặc WORKSHOP | Gọi `GET /api/events/?category=WORKSHOP` | Chỉ trả đúng danh mục yêu cầu |
-| TC-11 | Chi tiết sự kiện | Truy cập event chưa duyệt hoặc bị hủy | Gọi `GET /api/events/{id}/` cho PENDING và CANCELLED | API công khai trả 404 |
-| TC-12 | Sự kiện nổi bật | Lọc event tương lai đã duyệt | Gọi `GET /api/events/featured/` với event quá khứ và PENDING | Chỉ trả event PUBLISHED có thời gian tương lai |
-| TC-13 | Tạo sự kiện | Organizer tạo event và nhiều loại vé | Gửi `POST /api/events/create/` với hai loại vé và cấu hình hàng ghế | Trả 201; tạo Event, TicketType, Seat; event ở trạng thái PENDING |
-| TC-14 | Transaction tạo event | Hai loại vé tạo hàng ghế trùng | Gửi hai `row_prefix` tạo cùng tên hàng | Trả 400; không để lại Event hoặc Seat dở dang |
-| TC-15 | Quyền sở hữu event | Organizer xem danh sách của mình | Tạo event cho hai Organizer rồi gọi `GET /api/events/organizer/events/` | Chỉ trả event thuộc Organizer đang đăng nhập |
-| TC-16 | Admin duyệt event | Duyệt event PENDING | Admin gọi `POST /api/events/admin/{id}/approve/` | Event thành PUBLISHED và xuất hiện qua API công khai |
-| TC-17 | Upload thumbnail | Organizer upload ảnh hợp lệ | Mock Cloudinary rồi gửi JPG qua `POST /api/events/upload-thumbnail/` | Trả URL ảnh; không gọi Cloudinary thật trong test |
-| TC-18 | Sơ đồ ghế | Xem ghế của event PUBLISHED | Gọi `GET /api/seats/event/{event_id}/` | Ghế được sắp theo loại vé, hàng và số; có giá và trạng thái đúng |
-| TC-19 | Giữ ghế | Customer giữ một ghế còn trống | Gửi `POST /api/orders/hold/` với `seat_ids` | Trả 201; tạo Order PENDING; ghế LOCKED khoảng 10 phút |
-| TC-20 | Giữ ghế không hợp lệ | Chọn ghế khác event, ID trùng hoặc hơn 5 ghế | Gửi từng payload không hợp lệ | Trả 400; không tạo đơn sai |
-| TC-21 | Khóa ghế tuần tự | Hai Customer lần lượt giữ cùng ghế | Customer A giữ trước, Customer B giữ sau | Customer B nhận lỗi `seat_locked`; chỉ một đơn giữ ghế |
-| TC-22 | Race condition | Hai luồng giữ cùng ghế đồng thời | Dùng hai thread, hai kết nối DB và `Barrier` để bắt đầu cùng lúc | Một luồng thành công, một luồng nhận `seat_locked`; chỉ có một Order và OrderItem |
-| TC-23 | Hết hạn giữ ghế | Đơn vượt quá 10 phút | Đưa `expires_at` và `locked_until` về quá khứ rồi chạy xử lý hết hạn | Order thành EXPIRED; ghế trở lại AVAILABLE |
-| TC-24 | Tạo liên kết thanh toán | Tạo link cho order PENDING hợp lệ | Bật chế độ PayOS test và gọi `POST /api/orders/{id}/payos-link/` | Trả `checkoutUrl` và lưu URL vào order, không gọi ngân hàng thật |
-| TC-25 | Xác nhận thanh toán | Thanh toán đúng số tiền | Xác nhận order bằng mã giao dịch giả lập | Order PAID; ghế SOLD; tạo Payment và Ticket |
-| TC-26 | Chữ ký webhook | Webhook có chữ ký không hợp lệ | Mock hàm xác minh PayOS trả lỗi rồi gửi webhook | Trả 400; order vẫn PENDING; không tạo Payment hoặc Ticket |
-| TC-27 | Webhook lặp | PayOS gửi cùng webhook hai lần | Gửi hai request có cùng transaction reference | Chỉ tạo một Payment, một bộ Ticket và một email |
-| TC-28 | Đối soát PayOS | Return URL kiểm tra lại giao dịch PAID | Mock PayOS trả PAID rồi gọi `POST /api/orders/{id}/reconcile-payos/` | Backend kiểm tra orderCode, số tiền và transaction trước khi chuyển PAID |
-| TC-29 | IDOR đơn hàng | Customer B truy cập đơn của Customer A | Customer B gọi API chi tiết, hủy và đối soát order A | Trả 404; order A không thay đổi |
-| TC-30 | Ví vé | Chỉ lấy vé PAID của chính Customer | Tạo vé paid của hai khách và một vé trong order PENDING rồi gọi `GET /api/orders/my-tickets/` | Chỉ trả vé PAID thuộc Customer hiện tại |
-| TC-31 | Soát vé | Organizer chủ event quét QR hợp lệ | Gọi `POST /api/orders/check-in/` với QR của vé PAID | Trả 200; `is_checked_in=True` và có `checked_in_at` |
-| TC-32 | Chống check-in lặp | Quét cùng QR lần thứ hai | Gửi lại QR đã check-in | Trả 400; vé không bị cập nhật sai lần nữa |
-| TC-33 | Quyền soát vé | Customer hoặc Organizer khác quét QR | Đăng nhập sai vai trò/chủ sở hữu rồi gọi API check-in | Trả 403; vé vẫn chưa check-in |
-| TC-34 | QR không hợp lệ | Quét chuỗi QR không tồn tại | Gửi mã bất kỳ vào API check-in | Trả 404 và không thay đổi dữ liệu vé |
+| STT | Chức năng | Kịch bản | Kết quả kỳ vọng |
+|---:|---|---|---|
+| TC-01 | Đăng ký | Customer đăng ký hợp lệ | Tạo User/Customer, mật khẩu được hash, trả 201 |
+| TC-02 | Đăng ký | Organizer đăng ký hợp lệ | Tạo User/Organizer, trả 201 |
+| TC-03 | Đăng ký | Trùng username, email hoặc số điện thoại | Trả 400, không tạo dữ liệu trùng |
+| TC-04 | Đăng nhập | Email/username và mật khẩu đúng | Trả access, refresh token và role đúng |
+| TC-05 | Khóa tài khoản | `status=False` hoặc `is_active=False` | Không đăng nhập và token cũ không dùng được ở API bảo vệ |
+| TC-06 | Phân quyền | Customer gọi API Organizer/Admin | Trả 403, dữ liệu không thay đổi |
+| TC-07 | Admin user | Danh sách, tìm kiếm, lọc role/status và phân trang | Trả đúng tài khoản và thống kê |
+| TC-08 | Admin user | Xem chi tiết Customer/Organizer | Trả profile và statistics đúng, không lộ password |
+| TC-09 | Admin user | Khóa/mở khóa tài khoản | Đồng bộ `status` và `is_active`; chặn tự khóa/superuser |
+| TC-10 | Event công khai | Danh sách có PUBLISHED/PENDING/CANCELLED | Chỉ PUBLISHED được công khai |
+| TC-11 | Event công khai | Phân trang, tìm kiếm và lọc category | `count`, `next` và kết quả đúng điều kiện |
+| TC-12 | Event chi tiết | Truy cập event chưa duyệt | Trả 404 để không lộ dữ liệu |
+| TC-13 | Event nổi bật | Event quá khứ hoặc chưa duyệt | Chỉ trả event PUBLISHED trong tương lai |
+| TC-14 | Organizer create | Tạo event, nhiều loại vé và ghế | Event PENDING; TicketType/Seat được tạo đầy đủ |
+| TC-15 | Transaction event | Cấu hình hàng ghế bị trùng | Trả 400 và rollback toàn bộ dữ liệu dở dang |
+| TC-16 | Ownership event | Organizer xem event của mình | Không trả event của Organizer khác |
+| TC-17 | Thumbnail | Upload JPG/PNG/WEBP hợp lệ | Mock Cloudinary; trả secure URL |
+| TC-18 | Admin moderation | Approve/reject event PENDING | Chuyển đúng trạng thái; xử lý lặp trả conflict |
+| TC-19 | Sơ đồ ghế | Xem ghế event PUBLISHED | Đúng loại vé, hàng, số, giá và trạng thái |
+| TC-20 | Sơ đồ ghế | Event chưa duyệt hoặc bị hủy | API công khai trả 404 |
+| TC-21 | Giữ ghế | Customer giữ ghế AVAILABLE | Tạo Order PENDING và khóa ghế khoảng 10 phút |
+| TC-22 | Giữ ghế | ID trùng, khác event hoặc hơn 5 ghế | Trả 400, không tạo đơn sai |
+| TC-23 | Race condition | Hai Customer đồng thời giữ cùng ghế | Một thành công, một `seat_locked`; chỉ một OrderItem |
+| TC-24 | Hết hạn | Order vượt quá 10 phút | Order EXPIRED và ghế trở lại AVAILABLE |
+| TC-25 | Hủy đơn | Customer hủy Order PENDING | Order CANCELLED và giải phóng đúng ghế |
+| TC-26 | PayOS link | Order PENDING hợp lệ | Mock SDK; trả checkout URL đúng order |
+| TC-27 | PayOS webhook | Chữ ký hoặc số tiền sai | Trả lỗi; không tạo Payment/Ticket |
+| TC-28 | PayOS webhook | Gửi cùng webhook hai lần | Chỉ một Payment, một bộ Ticket và một email |
+| TC-29 | Reconcile | PayOS trả PAID hợp lệ | Kiểm tra orderCode/amount/reference rồi chuyển PAID |
+| TC-30 | IDOR order | Customer B truy cập Order A | Trả 404; Order A không thay đổi |
+| TC-31 | Vé của tôi | Hai khách và một Order PENDING | Chỉ trả Ticket thuộc Order PAID của đúng Customer |
+| TC-32 | Check-in | Organizer chủ event quét QR PAID | Thành công, lưu `checked_in_at` |
+| TC-33 | Check-in | Quét lại cùng QR | Trả 400, không check-in lần hai |
+| TC-34 | Check-in permission | Customer hoặc Organizer khác quét | Trả 403; Ticket không thay đổi |
+| TC-35 | Organizer report | Báo cáo event thuộc Organizer | Chỉ tính Order PAID, ghế và check-in đúng |
+| TC-36 | Organizer report | Xem báo cáo event người khác | Trả 404 để tránh lộ event |
+| TC-37 | Admin revenue | Lọc ngày/category/event/Organizer | Tất cả KPI và series dùng cùng bộ Order PAID |
+| TC-38 | Admin payment | Danh sách/detail và cảnh báo bất thường | Phân trang đúng, cảnh báo được tính từ dữ liệu hiện có |
+| TC-39 | Admin reconcile | Admin đối soát Order bất kỳ | Tái sử dụng luồng xác nhận; chống Payment/Ticket trùng |
+| TC-40 | Payout demo | Event đã diễn ra và có Order PAID | Admin đánh dấu `is_payout_completed=True` |
+| TC-41 | Payout demo | Xác nhận lần hai/event chưa bắt đầu | Trả conflict; không thay đổi dữ liệu khác |
+| TC-42 | AI seed | Chạy seed dịch vụ nhiều lần | `update_or_create`, không tạo code trùng |
+| TC-43 | RAG index | Chunk tài liệu và embedding đúng dimension | Tạo index hợp lệ; lỗi không phá index cũ |
+| TC-44 | RAG retrieval | Customer/Organizer hỏi đúng tài liệu | Chỉ lấy tài liệu đúng audience hoặc ALL |
+| TC-45 | AI GENERAL | Gửi câu hỏi có tài liệu | Trả answer/sources và lưu session/messages |
+| TC-46 | AI RECOMMEND | Tìm event hoặc kiểm tra ghế | Query DB đúng filter, không gọi Gemini |
+| TC-47 | AI PLAN | Dự toán và giá vé | Tính bằng Python/DB; Gemini chỉ diễn giải structured data |
+| TC-48 | AI session | User khác đọc hoặc tiếp tục session | Trả 404 chống IDOR |
+| TC-49 | AI memory | Hội thoại nhiều tin nhắn | Chỉ gửi tối đa 8 tin gần nhất theo đúng thứ tự |
+| TC-50 | RAG evaluation | Dataset có câu đúng nguồn và ngoài phạm vi | Tính đúng Hit@4/source/no-answer và report |
 
 ## 6. Vị trí test tự động
 
-| Nhóm | Thư mục/file |
+| Nhóm | Thư mục |
 |---|---|
-| Đăng ký và đăng nhập | `backend/authentication/tests/` |
-| Sự kiện công khai, Organizer, thumbnail và Admin | `backend/events/tests/` |
-| Sơ đồ ghế và race condition | `backend/seating/tests/` |
-| Giữ ghế, PayOS, thanh toán, vé và check-in | `backend/orders/tests/` |
+| Authentication và Admin user | `backend/authentication/tests/` |
+| Event công khai, Organizer, upload và moderation | `backend/events/tests/` |
+| Ghế và race condition | `backend/seating/tests/` |
+| Order, PayOS, ticket, reports, payment và payout | `backend/orders/tests/` |
+| RAG, tools, chat API và evaluation | `backend/ai_agent/tests/` |
 
-## 7. Cách chạy ở máy cá nhân
+## 7. Cách chạy
 
-Chạy toàn bộ backend test:
-
-```powershell
-cd backend
-..\venv\Scripts\python.exe manage.py test -v 2
+```bat
+cd /d <duong-dan-project>\backend
+..\venv\Scripts\activate.bat
+python manage.py check
+python manage.py makemigrations --check --dry-run
+python manage.py test -v 2
 ```
 
-Chạy riêng từng app:
+Frontend:
 
-```powershell
-cd backend
-..\venv\Scripts\python.exe manage.py test authentication.tests -v 2
-..\venv\Scripts\python.exe manage.py test events.tests -v 2
-..\venv\Scripts\python.exe manage.py test seating.tests -v 2
-..\venv\Scripts\python.exe manage.py test orders.tests -v 2
-```
-
-Chạy một file hoặc một test cụ thể:
-
-```powershell
-cd backend
-..\venv\Scripts\python.exe manage.py test seating.tests.test_race_condition -v 2
-..\venv\Scripts\python.exe manage.py test orders.tests.test_check_in.CheckInTests.test_ticket_cannot_be_checked_in_twice -v 2
-```
-
-Kiểm tra frontend:
-
-```powershell
-cd frontend
+```bat
+cd /d <duong-dan-project>\frontend
 npm ci
 npm run build
 ```
 
-> Test race condition cần PostgreSQL vì SQLite không mô phỏng đúng khóa dòng `select_for_update()`.
+Chi tiết lệnh theo app/file xem [TEST_COMMANDS.md](TEST_COMMANDS.md).
 
-## 8. Rủi ro đã biết
+## 8. Kiểm thử thủ công còn cần
 
-- Model tài khoản có cả `status` và `is_active`, nhưng luồng đăng nhập hiện dùng `is_active` để khóa đăng nhập. Test tự động bám theo hành vi này.
-- Workflow chưa triển khai website lên server; nó chỉ test backend và build frontend.
-- Giao diện trình duyệt và thanh toán ngân hàng thật vẫn cần kiểm thử thủ công trước khi demo.
+- Thanh toán ngân hàng và webhook PayOS qua public HTTPS.
+- Email SMTP thật và kiểm tra spam.
+- Upload Cloudinary bằng tài khoản thật.
+- Chatbot Gemini thật, quota và chất lượng câu trả lời.
+- Camera QR trên thiết bị thật.
+- Responsive và luồng end-to-end trên trình duyệt.
+- Payout hiện chỉ mô phỏng; không kiểm tra chuyển tiền ngân hàng.

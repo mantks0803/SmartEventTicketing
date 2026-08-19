@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Quy trình SmartEventTicketing và hướng dẫn nội bộ phục vụ đồ án  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -83,7 +83,7 @@ Việc kiểm tra và cập nhật được thực hiện trong transaction đ�
 
 1. Hướng dẫn khách mở “Vé của tôi”.
 2. Chọn đúng sự kiện và đúng vé.
-3. Nhân sự quét QR bằng tài khoản Organizer phù hợp hoặc yêu cầy khách hàng xuất trình mã của Vé.
+3. Nhân sự yêu cầu khách mở đúng vé, sau đó quét QR bằng tài khoản Organizer phù hợp.
 4. Chỉ cho khách vào khi hệ thống báo thành công.
 5. Nếu vé đã sử dụng hoặc không hợp lệ, chuyển sang quầy hỗ trợ.
 6. Không tự sửa trạng thái vé hoặc cho qua chỉ dựa trên ảnh chuyển khoản.
@@ -114,12 +114,13 @@ Thử mạng dự phòng và giữ hàng chờ có trật tự. Không ghi nhậ
 
 ## Sau sự kiện
 
-Organizer có thể xem số vé đã check-in trong báo cáo doanh thu sự kiện. Nên so sánh:
+Organizer có thể xem tổng số vé đã check-in trong báo cáo doanh thu sự kiện. Nên so sánh:
 
 - Vé đã bán.
 - Vé đã check-in.
 - Khách không đến.
-- Thời điểm đông nhất tại khu check-in.
+
+Phiên bản hiện tại chưa thống kê thời điểm check-in đông nhất; muốn có chỉ số này cần bổ sung báo cáo theo mốc thời gian.
 
 Dữ liệu này hỗ trợ cải thiện số quầy và thời gian mở cửa cho lần tổ chức sau.
 
@@ -130,4 +131,3 @@ Dữ liệu này hỗ trợ cải thiện số quầy và thời gian mở cửa
 - Không yêu cầu mật khẩu hoặc OTP ngân hàng.
 - Khóa thiết bị check-in khi không sử dụng.
 - Chỉ truy cập dữ liệu cần thiết cho sự kiện mình quản lý.
-

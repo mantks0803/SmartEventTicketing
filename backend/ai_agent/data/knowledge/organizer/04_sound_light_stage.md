@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Hướng dẫn nội bộ phục vụ đồ án SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -92,7 +92,7 @@ Tổng duyệt nên thực hiện với người phụ trách nội dung, kỹ t
 
 ## Lập chi phí kỹ thuật
 
-Tool dự toán đọc các bản ghi `EventService` thuộc nhóm `SOUND_LIGHT`. Giá phải xét theo gói, thời lượng, quy mô và khu vực nếu dữ liệu có hỗ trợ.
+Tool dự toán đọc các bản ghi `EventService` thuộc nhóm `SOUND_LIGHT`. Dịch vụ `PER_HOUR` nhân theo thời lượng, dịch vụ `PER_PERSON` nhân theo số khách, còn dịch vụ `PACKAGE` trong bản demo luôn tính một gói. Quy mô, khu vực và mức chất lượng được dùng để chọn bản ghi phù hợp.
 
 Chi phí có thể thay đổi do:
 
@@ -111,4 +111,3 @@ Chatbot chỉ trả khoảng giá tham khảo, không tự tạo thông số k�
 - Lưu file media cục bộ, không phụ thuộc hoàn toàn vào Internet.
 - Chỉ định người quyết định khi cần bỏ một hiệu ứng kỹ thuật.
 - Có phương án tiếp tục chương trình ở mức tối thiểu khi một thiết bị hỏng.
-

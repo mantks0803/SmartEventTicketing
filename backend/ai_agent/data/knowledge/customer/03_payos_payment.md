@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: POLICY  
 > Nguồn: Luồng thanh toán PayOS của SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -40,7 +40,7 @@ Khi PayOS báo giao dịch đã thanh toán, backend kiểm tra:
 
 - Mã đơn PayOS có khớp với mã đơn trên hệ thống không.
 - Tổng tiền yêu cầu có bằng tổng tiền đơn hàng không.
-- Số tiền đã thanh toán có đủ không.
+- Số tiền PayOS ghi nhận đã thanh toán có bằng chính xác tổng tiền đơn hàng không.
 - Số tiền còn thiếu có bằng 0 không.
 - PayOS có cung cấp mã tham chiếu giao dịch ngân hàng không.
 - Mã giao dịch có bị sử dụng cho đơn khác không.

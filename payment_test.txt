@@ -52,7 +52,7 @@ D:\SmartEventTicketing
 
 Bước 2. Mở file:
 
-D:\SmartEventTicketing\.env
+D:\SmartEventTicketing\backend\.env
 
 
 Bước 3. Đổi cấu hình PayOS mock thành:
@@ -109,8 +109,8 @@ Thay đổi .env chỉ chắc chắn có hiệu lực sau khi tắt và chạy l
 
 Bước 1. Chạy backend:
 
-cd D:\SmartEventTicketing
-.\venv\Scripts\python.exe manage.py runserver
+cd D:\SmartEventTicketing\backend
+..\venv\Scripts\python.exe manage.py runserver
 
 Kết quả mong đợi:
 
@@ -129,8 +129,8 @@ Local: http://localhost:5173/
 
 Bước 3. Có thể kiểm tra backend đã đọc đúng chế độ mock bằng lệnh:
 
-cd D:\SmartEventTicketing
-.\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print('PAYOS mock =', settings.PAYOS_SKIP_SIGNATURE_CHECK); print('Email backend =', settings.EMAIL_BACKEND)"
+cd D:\SmartEventTicketing\backend
+..\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print('PAYOS mock =', settings.PAYOS_SKIP_SIGNATURE_CHECK); print('Email backend =', settings.EMAIL_BACKEND)"
 
 Kết quả đúng phải có:
 
@@ -381,7 +381,7 @@ Không cần gửi webhook lần thứ hai.
 
 Thay số 25 thành Order ID của bạn:
 
-.\venv\Scripts\python.exe manage.py shell -c "from orders.models import Order; o=Order.objects.get(id=25); print('Order =', o.status); print('Payments =', o.payments.count()); print('Tickets =', o.tickets.count()); print('Seats =', [(i.seat.seat_name, i.seat.status) for i in o.items.select_related('seat')])"
+..\venv\Scripts\python.exe manage.py shell -c "from orders.models import Order; o=Order.objects.get(id=25); print('Order =', o.status); print('Payments =', o.payments.count()); print('Tickets =', o.tickets.count()); print('Seats =', [(i.seat.seat_name, i.seat.status) for i in o.items.select_related('seat')])"
 
 Ví dụ mua 2 ghế, kết quả đúng:
 
@@ -688,22 +688,22 @@ Nếu SMTP backend:
 
 Chạy riêng test orders:
 
-cd D:\SmartEventTicketing
-.\venv\Scripts\python.exe manage.py test orders --verbosity 2
+cd D:\SmartEventTicketing\backend
+..\venv\Scripts\python.exe manage.py test orders.tests --verbosity 2
 
 Theo code hiện tại, kết quả mong đợi:
 
-Found 17 test(s)
+Found 55 test(s)
 OK
 
 
 Chạy toàn bộ backend test:
 
-.\venv\Scripts\python.exe manage.py test
+..\venv\Scripts\python.exe manage.py test
 
 Theo code hiện tại, kết quả mong đợi:
 
-Found 21 test(s)
+Found 139 test(s)
 OK
 
 
@@ -731,7 +731,7 @@ Các test liên quan bao gồm:
 
 Bước 1. Mở lại:
 
-D:\SmartEventTicketing\.env
+D:\SmartEventTicketing\backend\.env
 
 
 Bước 2. Đổi:
@@ -750,13 +750,13 @@ EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
 
 Bước 4. Tắt và chạy lại backend:
 
-cd D:\SmartEventTicketing
-.\venv\Scripts\python.exe manage.py runserver
+cd D:\SmartEventTicketing\backend
+..\venv\Scripts\python.exe manage.py runserver
 
 
 Bước 5. Kiểm tra:
 
-.\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print(settings.PAYOS_SKIP_SIGNATURE_CHECK)"
+..\venv\Scripts\python.exe manage.py shell -c "from django.conf import settings; print(settings.PAYOS_SKIP_SIGNATURE_CHECK)"
 
 Kết quả phải là:
 

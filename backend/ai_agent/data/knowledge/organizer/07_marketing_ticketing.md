@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Quy trình SmartEventTicketing và hướng dẫn nội bộ phục vụ đồ án  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -94,9 +94,11 @@ Giá vé nên dựa trên:
 4. Quyền lợi của từng hạng vé.
 5. Giá các sự kiện cùng danh mục đang có trên hệ thống.
 
-Phép tính hòa vốn và đối chiếu giá nằm trong tool dự toán, không để LLM tự cộng.
+Trong code hiện tại, tool dùng `guest_count` làm số vé dự kiến bán và tính giá hòa vốn bằng tổng chi phí dự kiến chia cho `guest_count`. Tool chưa tự trừ vé mời, chưa áp dụng tỷ lệ bán dự kiến và chưa chia giá theo từng hạng vé. Nếu có các yếu tố này, Ban tổ chức phải điều chỉnh đầu vào hoặc tính thêm ngoài kết quả demo.
 
-Dữ liệu từ các sự kiện seed chỉ là tham khảo nội bộ của hệ thống, không được gọi là khảo sát thị trường chính thức.
+Mức tham khảo thị trường hiện là giá trung bình của tất cả `TicketType` thuộc các Event `PUBLISHED` cùng danh mục. Tool chưa lọc theo địa điểm, thời gian, số vé bán hoặc mức độ tương đồng của sự kiện. Phép tính nằm trong Python; LLM chỉ giải thích kết quả và không tự cộng tiền.
+
+Dữ liệu từ các sự kiện seed chỉ là tham khảo nội bộ của hệ thống, không được gọi là khảo sát thị trường chính thức hoặc giá bán được bảo đảm.
 
 ## Theo dõi hiệu quả
 
@@ -136,4 +138,3 @@ Project hiện chưa có chức năng sửa hoặc giảm giá hàng loạt cho 
 - Chỉ Order `PAID` được tính là doanh thu.
 - Không quảng cáo quyền lợi chưa được chuẩn bị.
 - Không hiển thị dữ liệu cá nhân của người mua trong nội dung marketing.
-

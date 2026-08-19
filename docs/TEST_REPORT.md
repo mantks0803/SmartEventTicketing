@@ -1,104 +1,122 @@
-# Báo cáo kết quả kiểm thử Smart Event Ticketing
+# Báo cáo kiểm thử SmartEventTicketing
 
-## 1. Thông tin lần kiểm thử
+## 1. Thông tin lần chạy gần nhất
 
 | Nội dung | Giá trị |
 |---|---|
-| Ngày kiểm thử | 11/08/2026 |
-| Nhánh Git | `folder-refactor` |
-| Commit trước khi tái cấu trúc | `7534b34` |
-| Môi trường | Máy local Windows |
-| Backend | Python 3.14.6, Django 6.0.7 |
-| Frontend | Node.js 24.14.1, Vue 3, Vite 8.2.0 |
-| Database | PostgreSQL 18.4 |
-
-> GitHub Actions sẽ dùng Python 3.12, Node.js 22.18.0 và PostgreSQL 16 để có môi trường ổn định, dễ lặp lại.
+| Ngày chạy | 19/08/2026 |
+| Nhánh tại thời điểm chạy | `chatbox-6` |
+| HEAD trước khi cập nhật tài liệu | `8d3ee00` |
+| Môi trường local | Windows |
+| Backend local | Python 3.14.6, Django 6.0.7 |
+| Frontend local | Node.js 24.14.1, Vue 3, Vite 8.2.0 |
+| Database local | PostgreSQL 18.4 với pgvector |
+| CI dự kiến | Python 3.12, Node.js 22.18.0, PostgreSQL 16 với pgvector |
 
 ## 2. Kết quả tổng hợp
 
 | Hạng mục | Tổng | Passed | Failed | Kết quả |
 |---|---:|---:|---:|---|
-| Authentication tests | 7 | 7 | 0 | PASS |
-| Event tests | 23 | 23 | 0 | PASS |
-| Seating tests | 5 | 5 | 0 | PASS |
-| Order, PayOS, ticket và check-in tests | 35 | 35 | 0 | PASS |
-| **Tổng backend** | **70** | **70** | **0** | **PASS** |
-| Django system check | 1 lần | 1 | 0 | PASS |
-| Migration check | 1 lần | 1 | 0 | PASS - No changes detected |
-| Vue production build | 1 lần | 1 | 0 | PASS |
+| Authentication và Admin user | 20 | 20 | 0 | PASS |
+| Events | 23 | 23 | 0 | PASS |
+| Seating | 5 | 5 | 0 | PASS |
+| Orders, PayOS, reports và payout | 55 | 55 | 0 | PASS |
+| AI Agent, RAG và chat API | 36 | 36 | 0 | PASS |
+| **Tổng backend** | **139** | **139** | **0** | **PASS** |
+| Django system check | 1 | 1 | 0 | PASS |
+| Migration check | 1 | 1 | 0 | PASS |
+| Python dependency check | 1 | 1 | 0 | PASS |
+| Vue production build | 1 | 1 | 0 | PASS |
 
 Tỷ lệ pass backend: **100%**.
 
 ## 3. Lệnh đã chạy
 
-```powershell
-cd backend
+```bat
+cd /d <duong-dan-project>\backend
 ..\venv\Scripts\python.exe manage.py check
 ..\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
-..\venv\Scripts\python.exe manage.py test -v 1
-cd ..\frontend
+..\venv\Scripts\python.exe manage.py test --keepdb --noinput -v 1
+..\venv\Scripts\python.exe -m pip check
+
+cd /d <duong-dan-project>\frontend
 npm.cmd run build
 ```
 
-## 4. Kết quả thực tế
+## 4. Output chính
 
 ### Backend
 
 ```text
-Found 70 test(s).
 System check identified no issues (0 silenced).
-Ran 70 tests in 61.810s
+No changes detected
+Found 139 test(s).
+Ran 139 tests in 127.612s
 OK
+```
+
+Test database được giữ lại bằng `--keepdb` để chạy các lần sau nhanh hơn.
+
+### Dependencies
+
+```text
+No broken requirements found.
 ```
 
 ### Frontend
 
 ```text
 vite v8.2.0 building client environment for production...
-175 modules transformed.
-build completed successfully in 0.838s
+193 modules transformed.
+build completed successfully.
 ```
 
-### Workflow YAML
-
-```text
-YAML parsed successfully
-Jobs: backend, frontend
-```
+Vite có cảnh báo bundle chính lớn hơn 500 kB. Đây là cảnh báo tối ưu hiệu năng, không phải lỗi build và không chặn bản demo.
 
 ## 5. Phạm vi đã xác nhận
 
-- Đăng ký Customer và Organizer.
-- Đăng nhập đúng, sai mật khẩu, tài khoản `is_active=False` và role Admin.
-- Phân quyền Customer, Organizer và Admin.
-- Danh sách event công khai, phân trang, tìm kiếm và lọc danh mục.
-- Tạo event, tạo loại vé và ghế trong transaction.
-- Upload ảnh Cloudinary bằng mock và duyệt event bởi Admin.
-- Sơ đồ ghế, giữ ghế 10 phút, hủy đơn và giải phóng ghế hết hạn.
-- Race condition hai Customer giữ cùng một ghế trên PostgreSQL.
-- Tạo link PayOS test, kiểm tra chữ ký webhook, chống webhook lặp và đối soát giao dịch.
-- Phát hành vé, danh sách vé của đúng Customer và không trả vé PENDING.
-- Check-in QR một lần và quyền soát vé của đúng Organizer.
-- Giữ nguyên template/script của 16 SFC và tách nguyên vẹn CSS scoped ra file riêng.
+- Đăng ký, đăng nhập, JWT, khóa tài khoản bằng cả `status` và `is_active`.
+- Phân quyền và ownership của Customer, Organizer và Admin.
+- Admin quản lý người dùng, thống kê và khóa/mở khóa tài khoản.
+- Event công khai, tìm kiếm, lọc, phân trang, tạo event trong transaction và moderation.
+- Upload Cloudinary bằng mock.
+- Ghế, giới hạn 5 ghế, giữ 10 phút, giải phóng hết hạn và race condition.
+- PayOS link, webhook signature, idempotency, reconcile và IDOR.
+- Email xác nhận bằng memory backend, phát hành vé và QR check-in một lần.
+- Báo cáo Organizer, báo cáo Admin, quản lý thanh toán và payout mô phỏng.
+- Seed dữ liệu AI, chunking, pgvector retrieval, audience filter và RAG evaluation.
+- Ba mode chat, session ownership, memory 8 tin nhắn và event tools.
+- Vue ChatWidget và toàn bộ frontend biên dịch thành công.
 
-## 6. Dịch vụ ngoài trong test
+## 6. Dịch vụ ngoài trong test tự động
 
-| Dịch vụ | Cách kiểm thử |
+| Dịch vụ | Cách test |
 |---|---|
-| PayOS | Mock SDK hoặc bật `PAYOS_SKIP_SIGNATURE_CHECK` trong từng test cần thiết |
-| Cloudinary | Mock `cloudinary.uploader.upload` |
-| Email | Dùng `django.core.mail.backends.locmem.EmailBackend` |
-| Ngân hàng | Không kết nối và không chuyển tiền thật |
+| PayOS | Mock SDK và response xác minh |
+| Cloudinary | Mock hàm upload |
+| Email | `locmem.EmailBackend` |
+| Gemini Chat/Embedding | Fake model hoặc mock tại nơi sử dụng |
+| Ngân hàng | Không kết nối và không chuyển tiền |
 
-## 7. GitHub Actions
+Do dùng mock, full backend test không tiêu tốn quota PayOS, Cloudinary, Gmail hoặc Google AI.
 
-| Workflow | Backend | Frontend | Trạng thái hiện tại |
-|---|---|---|---|
-| `.github/workflows/ci-cd.yml` | Chạy check, migration và 70 test | Chạy `npm ci` và `npm run build` | Chưa chạy trên GitHub vì chưa push theo yêu cầu |
+## 7. RAG evaluation gần nhất
 
-## 8. Ghi chú và giới hạn
+Báo cáo ngày 18/08/2026 ghi nhận 30 câu hỏi với Hit@4, source accuracy, no-answer accuracy và answer decision accuracy đều đạt 100%. Đây là snapshot trước khi một số knowledge Markdown được đồng bộ ngày 19/08/2026; cần rebuild index và chạy lại evaluation để có kết quả mới. Xem [RAG_EVALUATION_RESULT.md](RAG_EVALUATION_RESULT.md).
 
-- Backend được chuyển nguyên khối vào `backend/`; logic model, serializer, view, API, route và Vue component không bị thay đổi.
-- Test race condition cần PostgreSQL; không nên thay bằng SQLite.
-- Luồng đăng nhập hiện khóa tài khoản bằng field `is_active`. Field `status` trong model chưa phải điều kiện khóa đăng nhập.
-- Kiểm thử trình duyệt, email SMTP thật và thanh toán ngân hàng thật vẫn là kiểm thử thủ công ngoài phạm vi CI.
+## 8. GitHub Actions
+
+Workflow `.github/workflows/ci-cd.yml` gồm:
+
+- Backend job: PostgreSQL pgvector, cài requirements, check, migration và full test.
+- Frontend job: `npm ci` và `npm run build`.
+
+Workflow chạy khi push hoặc pull request vào `main`. Báo cáo này chỉ xác nhận local; trạng thái run trên GitHub cần xem trực tiếp trong tab Actions sau khi push.
+
+## 9. Giới hạn
+
+- Chưa có Selenium/E2E browser test trong CI.
+- PayOS thật, webhook HTTPS, SMTP, Cloudinary và camera QR vẫn cần test thủ công.
+- RAG evaluation thật dùng quota Gemini và không chạy trong CI.
+- Payout chỉ cập nhật trạng thái mô phỏng, không chuyển tiền thật.
+- Project chưa có deploy production tự động.

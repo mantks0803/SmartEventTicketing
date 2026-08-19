@@ -13,6 +13,10 @@ Evaluation dùng để kiểm tra chatbot có:
 Evaluation không thay thế unit test. Unit test kiểm tra code hoạt động đúng,
 còn evaluation đo chất lượng kết quả tìm kiếm và câu trả lời.
 
+Evaluation áp dụng trực tiếp cho retrieval của mode `GENERAL` và phần tư vấn
+RAG trong `PLAN_EVENT`. Mode `RECOMMEND_EVENT` query PostgreSQL trực tiếp nên
+được kiểm tra bằng test event tools, không dùng các chỉ số retrieval này.
+
 ## 2. Các file liên quan
 
 - `backend/ai_agent/data/evaluation/rag_questions.json`: 30 câu hỏi chuẩn.
@@ -63,7 +67,7 @@ chuyên sâu hoặc đánh giá thủ công.
 Mở Command Prompt:
 
 ```cmd
-cd /d D:\SmartEventTicketing
+cd /d <duong-dan-project>
 .\venv\Scripts\activate.bat
 cd backend
 chcp 65001
@@ -71,8 +75,13 @@ set PYTHONUTF8=1
 python manage.py evaluate_rag
 ```
 
-Lệnh này chạy toàn bộ 30 câu hỏi nhưng chỉ gọi Gemini Embedding. Nó không gọi
-Gemini Chat nên phù hợp để đo retrieval mà không dùng nhiều quota generation.
+Lệnh này chạy toàn bộ 30 câu hỏi và mỗi câu tạo một embedding query. Nó không
+gọi Gemini Chat nên không dùng quota generation, nhưng vẫn dùng quota Gemini
+Embedding.
+
+Với dataset hiện tại, một lần chạy đầy đủ dùng khoảng 30 request embedding.
+Nếu quota Embedding hoặc RPM/RPD đã gần giới hạn, nên chờ quota được làm mới
+thay vì chạy liên tục.
 
 ## 5. Lưu báo cáo Markdown
 
@@ -98,8 +107,9 @@ Hoặc lưu báo cáo:
 python manage.py evaluate_rag --with-generation --generation-limit 5 --report ..\docs\RAG_EVALUATION_RESULT.md
 ```
 
-Không nên chạy generation cho toàn bộ dataset liên tục vì mỗi câu dùng một lần
-gọi Gemini Chat và có thể chạm giới hạn request trong ngày.
+Không nên chạy generation cho toàn bộ dataset liên tục vì ngoài embedding,
+mỗi case generation còn dùng một lần gọi Gemini Chat và có thể chạm giới hạn
+request trong ngày.
 
 ## 7. Chạy test tự động
 
@@ -127,7 +137,19 @@ python manage.py test ai_agent -v 2
 Không nên thêm reranker hoặc hybrid search nếu `Hit@4`, source accuracy và
 no-answer accuracy hiện tại đã tốt.
 
-## 9. Lưu ý
+## 9. Cấu hình RAG hiện tại
+
+- Embedding model: `gemini-embedding-2`.
+- Kích thước vector: 768 chiều.
+- Chia đoạn: 1.000 ký tự, overlap 120 ký tự.
+- Số chunk context tối đa: 4.
+- Ngưỡng cosine distance: `0.40`; số càng nhỏ càng gần câu hỏi.
+
+Command evaluation in các chỉ số để người phát triển đọc và so sánh. Hiện tại
+nó không tự làm CI thất bại chỉ vì một tỷ lệ chất lượng thấp. GitHub Actions
+chỉ chạy các test có mock và không gọi Gemini thật.
+
+## 10. Giới hạn và lưu ý
 
 - Kết quả retrieval phụ thuộc model embedding và dữ liệu index hiện tại.
 - Phải chạy `python manage.py rebuild_rag_index` sau khi sửa tài liệu Markdown.
@@ -135,3 +157,5 @@ no-answer accuracy hiện tại đã tốt.
 - Không đưa lệnh gọi Gemini thật vào GitHub Actions.
 - Keyword coverage có thể thất bại khi Gemini diễn đạt đúng ý bằng từ đồng nghĩa;
   trường hợp đó cần đọc câu trả lời và đánh giá thủ công.
+- Generation evaluation chỉ kiểm tra RAG độc lập. Nó không đo memory hội thoại,
+  tool tìm sự kiện hoặc tool dự toán chi phí.
