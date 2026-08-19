@@ -1,0 +1,276 @@
+{
+  "name": "SmartEventTicketing RAG Evaluation",
+  "description": "Bộ câu hỏi chuẩn dùng để đo retrieval và generation của chatbot.",
+  "cases": [
+    {
+      "id": "customer_event_visibility",
+      "question": "Những sự kiện nào được hiển thị công khai trên hệ thống?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/01_event_search.md",
+      "expected_keywords": ["PUBLISHED"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "customer_live_seat_status",
+      "question": "Muốn biết sự kiện còn ghế hay không thì tôi kiểm tra ở đâu?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/01_event_search.md",
+      "expected_keywords": ["sơ đồ ghế"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "customer_max_seats",
+      "question": "Một đơn hàng được chọn tối đa bao nhiêu ghế?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/02_seat_hold.md",
+      "expected_keywords": ["5 ghế"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "customer_hold_time",
+      "question": "Sau khi chọn ghế thì hệ thống giữ ghế cho tôi bao lâu?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/02_seat_hold.md",
+      "expected_keywords": ["10 phút"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "customer_expired_order",
+      "question": "Hết thời gian giữ ghế thì đơn hàng và ghế được xử lý thế nào?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/02_seat_hold.md",
+      "expected_keywords": ["EXPIRED", "giải phóng"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "customer_payos_return_url",
+      "question": "Trang PayOS chuyển về báo thành công thì frontend có được tự phát hành vé không?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/03_payos_payment.md",
+      "expected_keywords": ["backend", "PayOS"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "customer_payos_late_confirmation",
+      "question": "PayOS đã trừ tiền nhưng trang kết quả vẫn đang xác nhận thì tôi nên làm gì?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/03_payos_payment.md",
+      "expected_keywords": ["không thanh toán lại", "Vé của tôi"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "customer_ticket_issued",
+      "question": "Khi nào vé điện tử và mã QR của tôi được tạo?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/04_ticket_qr_checkin.md",
+      "expected_keywords": ["PAID", "QR"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "customer_qr_reuse",
+      "question": "Một mã QR vé có thể quét check-in nhiều lần không?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/04_ticket_qr_checkin.md",
+      "expected_keywords": ["không", "check-in"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "customer_missing_email",
+      "question": "Đơn đã thanh toán và có vé nhưng tôi chưa nhận được email thì xử lý sao?",
+      "audience": "CUSTOMER",
+      "expected_source": "customer/05_order_support.md",
+      "expected_keywords": ["Vé của tôi", "spam"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_event_plan",
+      "question": "Ban tổ chức cần xác định những thông tin gì trước khi tạo sự kiện?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/01_event_planning.md",
+      "expected_keywords": ["mục tiêu", "đối tượng"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "organizer_event_approval",
+      "question": "Sự kiện vừa tạo có được bán vé ngay hay phải chờ Admin duyệt?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/01_event_planning.md",
+      "expected_keywords": ["PENDING", "Admin"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_budget_range",
+      "question": "Tại sao ngân sách sự kiện nên tính theo khoảng thấp và cao?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/02_budget_planning.md",
+      "expected_keywords": ["dự phòng"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_break_even",
+      "question": "Cách tính giá vé hòa vốn cho một sự kiện như thế nào?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/02_budget_planning.md",
+      "expected_keywords": ["tổng chi phí", "số vé"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "organizer_venue_capacity",
+      "question": "Chọn địa điểm tổ chức cần xem những yếu tố sức chứa nào?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/03_venue_capacity.md",
+      "expected_keywords": ["sức chứa", "lối thoát"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_venue_survey",
+      "question": "Trước khi ký địa điểm, ban tổ chức nên khảo sát những gì?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/03_venue_capacity.md",
+      "expected_keywords": ["khảo sát"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_sound_light",
+      "question": "Lập kế hoạch âm thanh ánh sáng sân khấu cần chuẩn bị những hạng mục nào?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/04_sound_light_stage.md",
+      "expected_keywords": ["âm thanh", "ánh sáng"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_decoration_checkin",
+      "question": "Khu vực trang trí check-in nên được bố trí như thế nào để không ùn tắc?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/05_decoration_branding.md",
+      "expected_keywords": ["xếp hàng", "lối đi"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_checkin_staff",
+      "question": "Khoảng 400 khách đến trong một giờ thì nên tổ chức quầy check-in ra sao?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/06_staff_checkin.md",
+      "expected_keywords": ["nhiều", "quầy"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "organizer_checkin_permission",
+      "question": "Organizer có được quét QR vé của sự kiện do người khác tổ chức không?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/06_staff_checkin.md",
+      "expected_keywords": ["không", "sở hữu"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_marketing_phases",
+      "question": "Kế hoạch truyền thông bán vé nên chia thành những giai đoạn nào?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/07_marketing_ticketing.md",
+      "expected_keywords": ["mở bán", "truyền thông"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_ticket_design",
+      "question": "Khi thiết kế các hạng vé, giá vé nên dựa trên những yếu tố nào?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/07_marketing_ticketing.md",
+      "expected_keywords": ["chi phí", "quyền lợi"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_timeline",
+      "question": "Cho tôi timeline tham khảo để chuẩn bị một sự kiện quy mô vừa.",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/08_event_timeline.md",
+      "expected_keywords": ["timeline", "tổng duyệt"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_payout_demo",
+      "question": "Quyết toán mô phỏng sau sự kiện có chuyển tiền thật cho ban tổ chức không?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/08_event_timeline.md",
+      "expected_keywords": ["không chuyển tiền thật", "is_payout_completed"],
+      "should_answer": true,
+      "run_generation": false
+    },
+    {
+      "id": "organizer_risk_priority",
+      "question": "Ban tổ chức nên đánh giá và ưu tiên rủi ro theo cách nào?",
+      "audience": "ORGANIZER",
+      "expected_source": "organizer/09_risk_management.md",
+      "expected_keywords": ["khả năng", "ảnh hưởng"],
+      "should_answer": true,
+      "run_generation": true
+    },
+    {
+      "id": "out_of_scope_weather",
+      "question": "Dự báo thời tiết Đà Nẵng ngày mai có mưa không?",
+      "audience": "CUSTOMER",
+      "expected_source": null,
+      "expected_keywords": [],
+      "should_answer": false,
+      "run_generation": false
+    },
+    {
+      "id": "out_of_scope_cooking",
+      "question": "Hướng dẫn tôi nấu món bò kho ngon tại nhà.",
+      "audience": "CUSTOMER",
+      "expected_source": null,
+      "expected_keywords": [],
+      "should_answer": false,
+      "run_generation": false
+    },
+    {
+      "id": "out_of_scope_stock",
+      "question": "Ngày mai nên mua cổ phiếu ngân hàng nào để có lợi nhuận?",
+      "audience": "ORGANIZER",
+      "expected_source": null,
+      "expected_keywords": [],
+      "should_answer": false,
+      "run_generation": false
+    },
+    {
+      "id": "out_of_scope_medical",
+      "question": "Tôi bị đau ngực thì nên uống loại thuốc nào?",
+      "audience": "CUSTOMER",
+      "expected_source": null,
+      "expected_keywords": [],
+      "should_answer": false,
+      "run_generation": false
+    },
+    {
+      "id": "out_of_scope_football",
+      "question": "Đội bóng nào sẽ vô địch World Cup lần tiếp theo?",
+      "audience": "ORGANIZER",
+      "expected_source": null,
+      "expected_keywords": [],
+      "should_answer": false,
+      "run_generation": false
+    }
+  ]
+}
