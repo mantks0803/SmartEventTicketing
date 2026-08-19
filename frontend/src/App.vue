@@ -7,9 +7,11 @@
     </main>
 
     <AppFooter />
+    <ChatWidget />
   </div>
 </template>
 <script setup>
 import AppNavbar from '@/components/AppNavbar.vue'
 import AppFooter from '@/components/AppFooter.vue'
+import ChatWidget from '@/components/chat/ChatWidget.vue'
 </script>
