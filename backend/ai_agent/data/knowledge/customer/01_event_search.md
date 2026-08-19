@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: GENERAL  
 > Nguồn: Quy trình đang hoạt động của SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -43,7 +43,7 @@ Nếu tên nghệ sĩ hoặc diễn giả được ghi trong tên sự kiện th
 
 ## Phân trang và sự kiện nổi bật
 
-Danh sách sự kiện được phân trang, mặc định tối đa 12 sự kiện trên một trang. Người dùng có thể chuyển trang để xem thêm kết quả.
+Danh sách sự kiện được phân trang, mặc định 12 sự kiện trên một trang. API có thể nhận `page_size` và giới hạn tối đa 100 sự kiện trên một trang. Giao diện hiện dùng phân trang để người dùng chuyển sang các kết quả tiếp theo.
 
 Khu vực sự kiện nổi bật ưu tiên các sự kiện `PUBLISHED` chưa diễn ra và sắp xếp theo thời gian bắt đầu gần nhất. Đây là danh sách gợi ý nhanh, không phải cam kết rằng sự kiện còn đủ số ghế theo yêu cầu của khách.
 
@@ -72,7 +72,9 @@ Khách hàng nên xác định:
 4. Ngân sách tối đa cho một vé.
 5. Số lượng người đi cùng.
 
-Chatbot có thể dùng các tiêu chí này để tìm sự kiện trong database. Kết quả đề xuất phải lấy từ dữ liệu hiện tại, chỉ gồm sự kiện công khai, chưa diễn ra và có ghế phù hợp tại thời điểm kiểm tra.
+Chatbot có thể dùng các tiêu chí này để tìm tối đa 5 sự kiện trong database. Kết quả chỉ gồm sự kiện `PUBLISHED`, chưa diễn ra và có ít nhất một ghế `AVAILABLE` tại thời điểm truy vấn.
+
+Khi khách nhập ngân sách, tool so sánh ngân sách với mức giá thấp nhất được cấu hình trong các `TicketType` của sự kiện. Điều này không bảo đảm ghế còn trống thuộc đúng loại vé có giá thấp nhất. Khách cần mở sơ đồ ghế để kiểm tra loại vé và ghế còn trống trước khi đặt.
 
 ## Khi không tìm thấy kết quả
 
@@ -88,4 +90,3 @@ Nếu không có sự kiện phù hợp, chatbot phải thông báo chưa tìm t
 ## Lưu ý về dữ liệu tức thời
 
 Tên, giá vé và trạng thái ghế phải được đọc từ database khi khách hỏi. Không sử dụng tài liệu RAG này để khẳng định một sự kiện cụ thể còn ghế. Khi dữ liệu trên màn hình và dữ liệu giữ ghế khác nhau, kết quả xác nhận từ backend là kết quả cuối cùng.
-

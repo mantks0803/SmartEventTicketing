@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: POLICY  
 > Nguồn: Quy trình đặt ghế của SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -72,6 +72,8 @@ Nếu đơn chưa được thanh toán khi hết hạn:
 
 Đơn hết hạn vẫn được lưu trong database để quản lý lịch sử và bảo đảm tính nhất quán, nhưng không tạo vé và không xuất hiện trong “Vé của tôi”.
 
+Project hiện xử lý đơn hết hạn khi có luồng liên quan chạy, ví dụ tải sơ đồ ghế, giữ ghế, xem một số báo cáo hoặc chạy lệnh dọn đơn hết hạn. Không có worker chạy nền mỗi giây, nên một đơn có thể còn hiển thị `PENDING` trong database cho đến lần xử lý tiếp theo. Khi triển khai production, lệnh `python manage.py release_expired_orders` cần được chạy định kỳ bằng scheduler.
+
 ## Hủy đơn đang giữ ghế
 
 Khách hàng có thể hủy đơn khi đơn còn ở trạng thái `PENDING`. Khi hủy thành công:
@@ -96,4 +98,3 @@ Vì vậy, việc ghế có màu trống trên màn hình không bảo đảm tu
 - **Sự kiện đã bắt đầu:** không thể tạo đơn mới.
 - **Chọn quá 5 ghế:** giảm số ghế trong đơn.
 - **Đơn đã hết hạn:** quay lại sự kiện và tạo đơn mới.
-

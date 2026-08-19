@@ -1,9 +1,23 @@
 # Kết quả đánh giá RAG
 
+> Đây là snapshot theo tài liệu, model embedding và vector index tại thời điểm
+> chạy. Sau khi sửa knowledge Markdown hoặc rebuild index, cần chạy evaluation
+> lại để cập nhật kết quả.
+>
+> Một số knowledge Markdown đã được đồng bộ lại ngày 19/08/2026. Báo cáo bên
+> dưới chưa được chạy lại để tránh tiêu tốn quota Gemini; không xem đây là kết
+> quả của bộ tài liệu mới nhất.
+
 - Bộ dữ liệu: **SmartEventTicketing RAG Evaluation**
 - Thời gian chạy: **18/08/2026 22:00:40 SE Asia Standard Time**
+- Git revision: **không được ghi nhận trong lần chạy này**
+- Embedding model: **gemini-embedding-2**
+- Kích thước vector: **768**
+- Chia đoạn: **1.000 ký tự, overlap 120 ký tự**
+- Ngưỡng relevance: **cosine distance 0.40**
 - Tổng số câu hỏi: **30**
 - Top K: **4**
+- Generation evaluation: **không chạy**
 
 ## Chỉ số tổng hợp
 

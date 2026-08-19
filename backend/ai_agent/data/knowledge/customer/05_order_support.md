@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: POLICY  
 > Nguồn: Vòng đời đơn hàng của SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -67,7 +67,7 @@ Khách hàng nên:
 
 ### Đã hết thời gian giữ ghế nhưng chưa trả tiền
 
-Đơn sẽ hết hạn và ghế được giải phóng. Khách hàng quay lại sự kiện để chọn ghế và tạo đơn mới.
+Đơn sẽ được chuyển sang hết hạn và ghế được giải phóng khi hệ thống chạy luồng xử lý đơn hết hạn. Project demo xử lý việc này theo yêu cầu hoặc bằng lệnh định kỳ, không có worker chạy nền mỗi giây. Khách hàng quay lại sự kiện để tải trạng thái ghế mới và tạo đơn mới.
 
 ### Đã chuyển tiền sau khi đơn hết hạn
 
@@ -106,7 +106,7 @@ Khách hàng không được cung cấp:
 - Toàn bộ thông tin thẻ hoặc tài khoản ngân hàng.
 - Mã QR vé ở nơi công khai.
 
-Kênh email hỗ trợ đang hiển thị trên website là `dephucau@gmail.com`.
+Kênh email hỗ trợ đang hiển thị trên website là `hotro@smartticket.vn`.
 
 ## Giới hạn hỗ trợ hiện tại
 

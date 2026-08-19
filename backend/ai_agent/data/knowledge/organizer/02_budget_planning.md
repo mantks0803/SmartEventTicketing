@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Phương pháp dự toán nội bộ phục vụ đồ án SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 19/08/2026
 
 ## Mục đích
 
@@ -13,16 +13,10 @@ Tài liệu này quy định cách thu thập đầu vào, chia nhóm chi phí, 
 
 - Loại sự kiện.
 - Khu vực tổ chức.
-- Sức chứa tối đa.
 - Số khách dự kiến.
-- Tỷ lệ vé dự kiến bán.
-- Ngày và thời lượng tổ chức.
+- Thời lượng tổ chức nếu dịch vụ tính theo giờ.
 - Các nhóm dịch vụ cần dùng.
 - Mức chất lượng: tiết kiệm, tiêu chuẩn hoặc nâng cao.
-- Ngân sách tối đa nếu đã có.
-- Số loại vé dự kiến.
-
-Nếu Ban tổ chức chưa biết tỷ lệ bán vé, hệ thống có thể dùng giả định demo 80% nhưng phải công khai giả định này trong câu trả lời.
 
 ## Các nhóm chi phí chính
 
@@ -70,59 +64,43 @@ Với mỗi dịch vụ:
 Chi phí dịch vụ = đơn giá × số lượng áp dụng
 ```
 
-Sau đó:
+Sau đó, bản demo tính:
 
 ```text
-Tổng chi phí cơ bản = tổng các nhóm chi phí
+Chi phí thấp nhất = tổng min_price × số lượng của từng dịch vụ
 
-Chi phí dự phòng = tổng chi phí cơ bản × tỷ lệ dự phòng
+Chi phí cao nhất = tổng max_price × số lượng của từng dịch vụ
 
-Tổng chi phí dự kiến = tổng chi phí cơ bản + chi phí dự phòng
+Chi phí dự phòng = chi phí cao nhất × 10%
+
+Tổng chi phí dự kiến = chi phí cao nhất + chi phí dự phòng
 ```
 
 MVP sử dụng tỷ lệ dự phòng mặc định 10%. Đây là giả định phục vụ dự toán, không phải quy định bắt buộc cho mọi sự kiện.
 
-Kết quả phải trả theo khoảng `min` và `max`, không chỉ trả một con số duy nhất.
-
-## Tính số vé dự kiến bán
-
-Không nên giả định bán hết 100% sức chứa.
-
-```text
-Số vé dự kiến bán = sức chứa × tỷ lệ bán vé dự kiến
-```
-
-Ví dụ, sự kiện có 500 ghế và tỷ lệ bán dự kiến 80%:
-
-```text
-500 × 80% = 400 vé dự kiến bán
-```
-
-Nếu có vé mời hoặc vé miễn phí, cần trừ chúng khỏi số vé có thể tạo doanh thu trước khi tính hòa vốn.
+Response trả cả chi phí thấp nhất, chi phí cao nhất, dự phòng và tổng dự kiến.
 
 ## Tính giá vé hòa vốn
 
-```text
-Giá hòa vốn thấp = tổng chi phí dự kiến thấp ÷ số vé dự kiến bán
+Trong phiên bản demo hiện tại, `guest_count` đồng thời được dùng làm số vé dự kiến bán. Nghĩa là công thức đang giả định bán đủ số vé tương ứng số khách đã nhập.
 
-Giá hòa vốn cao = tổng chi phí dự kiến cao ÷ số vé dự kiến bán
+```text
+Giá vé hòa vốn = tổng chi phí dự kiến ÷ số khách dự kiến
 ```
 
 Ví dụ minh họa:
 
 - Sức chứa: 500.
-- Tỷ lệ bán dự kiến: 80%.
-- Số vé dự kiến bán: 400.
-- Chi phí sau dự phòng: 200–300 triệu đồng.
+- Số khách và số vé dự kiến bán: 500.
+- Tổng chi phí dự kiến sau dự phòng: 250 triệu đồng.
 
 Kết quả:
 
 ```text
-200.000.000 ÷ 400 = 500.000 đồng/vé
-300.000.000 ÷ 400 = 750.000 đồng/vé
+250.000.000 ÷ 500 = 500.000 đồng/vé
 ```
 
-Khoảng 500.000–750.000 đồng là mức hòa vốn theo giả định, chưa phải mức giá bảo đảm bán được vé.
+500.000 đồng là mức hòa vốn theo giả định bán đủ 500 vé, chưa phải mức giá bảo đảm bán được vé hoặc có lợi nhuận.
 
 ## Đối chiếu giá vé trên hệ thống
 
@@ -132,7 +110,7 @@ Backend có thể query `TicketType.price` của các Event:
 - Đang `PUBLISHED`.
 - Có dữ liệu vé hợp lệ.
 
-Kết quả tham khảo nên gồm giá thấp nhất, trung vị, cao nhất và số mẫu. Giá trung vị hữu ích hơn giá trung bình khi có một số loại vé quá cao hoặc quá thấp.
+Backend hiện tính trung bình cộng `TicketType.price` của tất cả loại vé phù hợp. Kết quả được trả trong field `market_reference_avg_price`.
 
 Dữ liệu seed là dữ liệu demo, vì vậy chatbot phải nói “giá các sự kiện tương tự trên hệ thống”, không gọi đây là giá thị trường thực tế.
 
@@ -140,14 +118,14 @@ Nếu không có sự kiện tương tự, chatbot chỉ đưa giá theo công t
 
 ## Gợi ý nhiều hạng vé
 
-MVP có thể đề xuất hai hạng:
+Ban tổ chức có thể tham khảo hai hạng:
 
 - Vé phổ thông gần mức hòa vốn mục tiêu.
 - Vé VIP cao hơn vé phổ thông dựa trên quyền lợi và vị trí ghế.
 
 Không nên áp dụng một tỷ lệ VIP cố định cho mọi sự kiện. Nếu dùng tỷ lệ minh họa, chatbot phải ghi đây là giả định và mô tả quyền lợi đi kèm.
 
-Tổng doanh thu dự kiến cần tính theo số vé dự kiến bán của từng hạng, không lấy toàn bộ sức chứa nhân với giá cao nhất.
+Tool hiện chưa tự chia tỷ lệ ghế hoặc đề xuất giá riêng cho từng hạng vé. Nếu cần nhiều hạng, Ban tổ chức phải tự xác định số lượng và quyền lợi trước khi tạo sự kiện.
 
 ## Câu trả lời mẫu
 
@@ -157,16 +135,16 @@ Một câu trả lời tốt gồm:
 2. Bảng chi phí thấp–cao theo nhóm.
 3. Chi phí dự phòng.
 4. Tổng dự kiến.
-5. Số vé dự kiến bán.
-6. Khoảng giá hòa vốn.
-7. Giá các sự kiện tương tự trên hệ thống nếu có.
-8. Cảnh báo đây là dự toán tham khảo.
+5. Giả định số vé bán bằng số khách đã nhập.
+6. Giá vé hòa vốn.
+7. Giá vé trung bình của các sự kiện cùng danh mục trên hệ thống nếu có.
+8. Cảnh báo đây là dữ liệu demo và dự toán tham khảo.
 
 ## Giới hạn
 
 - Không xem dữ liệu demo là báo giá nhà cung cấp thật.
-- Không cam kết bán được tỷ lệ vé đã giả định.
+- Giá hòa vốn hiện giả định bán đủ số vé bằng `guest_count`.
+- Giá tham khảo chỉ là trung bình dữ liệu nội bộ, không phải giá thị trường bên ngoài.
 - Không để LLM tự cộng tiền hoặc tự sửa kết quả Python.
 - Không tự thêm phí nền tảng, thuế hoặc khoản pháp lý nếu database chưa có dữ liệu.
 - Không cam kết lợi nhuận.
-
