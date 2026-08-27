@@ -2,5 +2,11 @@
   background-color: #FFFFFF;
 }
 .border-slate {
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
+}
+
+.btn-white:hover:not(:disabled) {
+  border-color: #F47C5A;
+  background-color: #FFE9DF;
+  color: #DF6848;
 }

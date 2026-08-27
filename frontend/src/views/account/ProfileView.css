@@ -1,19 +1,55 @@
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
 }
 
 .bg-blue-subtle {
-  background-color: #EFF6FF;
+  background-color: #E7F4F1;
+}
+
+.bg-page-custom {
+  background-color: #FFF9F5;
+}
+
+.bg-white {
+  border-color: #E5DED8 !important;
+}
+
+.bg-light {
+  background-color: #FFF9F5 !important;
+}
+
+.border-primary {
+  border-color: #F47C5A !important;
+}
+
+.text-primary {
+  color: #4FA39A !important;
 }
 
 .nav-tabs .nav-link {
-  color: #64748B;
+  color: #6F7976;
   border: none;
   border-bottom: 2px solid transparent;
 }
 
 .nav-tabs .nav-link.active {
-  color: #2563EB;
-  border-bottom: 2px solid #2563EB;
+  color: #F47C5A;
+  border-bottom: 2px solid #F47C5A;
   background: transparent;
+}
+
+.form-control:focus {
+  border-color: #F47C5A;
+  box-shadow: 0 0 0 0.2rem rgba(244, 124, 90, 0.14);
+}
+
+.btn-primary {
+  border-color: #F47C5A;
+  background-color: #F47C5A;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  border-color: #DF6848;
+  background-color: #DF6848;
 }

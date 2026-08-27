@@ -1,14 +1,14 @@
 .payment-result-page {
-  background: radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 35%), #F8FAFC;
+  background: #FFF9F5;
 }
 
 .result-card {
   max-width: 650px;
   overflow: hidden;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
   border-radius: 24px;
   background: #FFFFFF;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 22px 54px rgba(84, 67, 57, 0.12);
 }
 
 .result-content {
@@ -51,15 +51,15 @@
 .order-summary {
   padding: 18px;
   margin: 28px 0;
-  border: 1px solid #DBEAFE;
+  border: 1px solid #F4C2B4;
   border-radius: 16px;
-  background: #F8FAFC;
+  background: #FFF9F5;
   text-align: left;
 }
 
 .summary-row {
   padding: 10px 0;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E5DED8;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -71,7 +71,35 @@
 }
 
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
+}
+
+.text-primary,
+.spinner-border.text-primary {
+  color: #F47C5A !important;
+}
+
+.btn-primary {
+  border-color: #F47C5A;
+  background-color: #F47C5A;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  border-color: #DF6848;
+  background-color: #DF6848;
+}
+
+.btn-outline-primary {
+  color: #F47C5A;
+  border-color: #F47C5A;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  color: #FFFFFF;
+  border-color: #DF6848;
+  background-color: #DF6848;
 }
 
 @media (max-width: 576px) {

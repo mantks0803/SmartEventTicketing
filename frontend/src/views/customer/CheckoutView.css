@@ -3,5 +3,26 @@
 }
 
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
+}
+
+.bg-page-custom {
+  background-color: #FFF9F5;
+}
+
+.bg-white {
+  border-color: #E5DED8 !important;
+}
+
+.bg-light-custom {
+  background-color: #FFF9F5;
+}
+
+.text-primary-custom {
+  color: #F47C5A !important;
+}
+
+.form-check-input:checked {
+  border-color: #F47C5A;
+  background-color: #F47C5A;
 }

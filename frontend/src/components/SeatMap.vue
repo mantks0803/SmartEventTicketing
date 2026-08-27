@@ -86,7 +86,7 @@ const props = defineProps({
 
 defineEmits(['toggle-select-seat'])
 
-const colorPalette = ['#1976D2', '#7C3AED', '#059669', '#D97706', '#E11D48']
+const colorPalette = ['#F47C5A', '#4FA39A', '#79A98D', '#D49B2B', '#D95D73']
 
 const getTicketTypeColor = (ticketTypeId) => {
   const index = Math.abs(ticketTypeId || 0) % colorPalette.length
@@ -143,7 +143,7 @@ const getSeatStyle = (seat, blockColor) => {
   if (seat.status === 'AVAILABLE' && !props.selectedSeatIds.includes(seat.id)) {
     return {
       borderColor: blockColor,
-      color: '#0F172A'
+      color: '#34413F'
     }
   }
   return {}

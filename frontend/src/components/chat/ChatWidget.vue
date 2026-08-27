@@ -813,7 +813,7 @@ const showInputError = async (message) => {
     title: 'Thông tin chưa đầy đủ',
     text: message,
     icon: 'warning',
-    confirmButtonColor: '#2563EB',
+    confirmButtonColor: '#F47C5A',
     customClass: { popup: 'rounded-4' }
   })
 }
@@ -946,7 +946,7 @@ const submitMessage = async (options = {}) => {
         title: 'Phiên đăng nhập đã hết hạn',
         text: 'Vui lòng đăng nhập lại để tiếp tục sử dụng trợ lý.',
         icon: 'info',
-        confirmButtonColor: '#2563EB',
+        confirmButtonColor: '#F47C5A',
         customClass: { popup: 'rounded-4' }
       })
       return

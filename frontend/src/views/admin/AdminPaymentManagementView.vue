@@ -564,7 +564,7 @@ const applyFilters = () => {
       title: 'Khoảng ngày không hợp lệ',
       text: 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.',
       icon: 'warning',
-      confirmButtonColor: '#2563eb',
+      confirmButtonColor: '#F47C5A',
     })
     return
   }
@@ -621,7 +621,7 @@ const confirmReconcile = async () => {
     showCancelButton: true,
     confirmButtonText: 'Kiểm tra PayOS',
     cancelButtonText: 'Quay lại',
-    confirmButtonColor: '#2563eb',
+    confirmButtonColor: '#F47C5A',
   })
   if (!result.isConfirmed) return
 
@@ -637,14 +637,14 @@ const confirmReconcile = async () => {
         title: 'Đối soát thành công',
         text: 'Đơn hàng, thanh toán và vé đã được đồng bộ an toàn.',
         icon: 'success',
-        confirmButtonColor: '#2563eb',
+        confirmButtonColor: '#F47C5A',
       })
     } else {
       await Swal.fire({
         title: 'PayOS chưa ghi nhận thanh toán',
         text: `Trạng thái hiện tại: ${response.data.payos_status || 'UNKNOWN'}. Dữ liệu đơn hàng chưa bị thay đổi.`,
         icon: 'info',
-        confirmButtonColor: '#2563eb',
+        confirmButtonColor: '#F47C5A',
       })
     }
 

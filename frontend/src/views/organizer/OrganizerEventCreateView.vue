@@ -486,7 +486,7 @@ const applyPreset = async (preset) => {
     showCancelButton: true,
     confirmButtonText: 'Chọn sơ đồ',
     cancelButtonText: 'Hủy',
-    confirmButtonColor: '#2563EB',
+    confirmButtonColor: '#F47C5A',
     customClass: {
       popup: 'rounded-4'
     }
@@ -597,7 +597,7 @@ const handleThumbnailChange = async (event) => {
       title: 'Định dạng ảnh không hợp lệ',
       text: 'Vui lòng chọn ảnh JPG, PNG hoặc WEBP.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -609,7 +609,7 @@ const handleThumbnailChange = async (event) => {
       title: 'Dung lượng ảnh quá lớn',
       text: 'Ảnh sự kiện không được vượt quá 5MB.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -717,7 +717,7 @@ const submitEvent = async () => {
       title: 'Thông tin chưa hợp lệ',
       text: validationError,
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: {
         popup: 'rounded-4'
       }

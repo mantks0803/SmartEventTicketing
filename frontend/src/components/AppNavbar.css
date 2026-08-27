@@ -1,40 +1,40 @@
 .navbar-dark-theme {
-  background-color: #150E24;
-  border-bottom: 1px solid #1E293B;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E5DED8;
+  box-shadow: 0 4px 18px rgba(86, 105, 100, 0.08);
 }
 
 .logo-icon-bg {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  background: #F47C5A;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .text-accent {
-  color: #38BDF8;
+  color: #4FA39A;
 }
 
 .text-slate-light {
-  color: #CBD5E1 !important;
+  color: #5F6C69 !important;
 }
 
 .text-slate-light:hover {
-  color: #FFFFFF !important;
+  color: #F47C5A !important;
 }
 
 .search-box-dark {
   padding: 2px 12px;
-  border: 1px solid #334155;
+  border: 1px solid #CFE2DE;
   border-radius: 9999px;
-  background-color: #1E3A5F;
+  background-color: #E7F4F1;
 }
 
 .search-input::placeholder {
-  color: #CBD5E1;
+  color: #7B8784;
   font-size: 0.9rem;
 }
 
@@ -43,13 +43,13 @@
 }
 
 .text-cyan {
-  color: #38BDF8 !important;
-  border-color: #38BDF8 !important;
+  color: #4FA39A !important;
+  border-color: #4FA39A !important;
 }
 
 .text-cyan:hover {
-  background-color: #38BDF8 !important;
-  color: #0F172A !important;
+  background-color: #4FA39A !important;
+  color: #FFFFFF !important;
 }
 
 .dropdown-menu {
@@ -63,12 +63,41 @@
 }
 
 .dropdown-item:active {
-  background-color: #EFF6FF;
-  color: #0F172A;
+  background-color: #FFE9DF;
+  color: #34413F;
 }
 
 .user-avatar {
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid #CFE2DE;
+}
+
+.navbar-dark-theme .navbar-brand,
+.navbar-dark-theme .text-white,
+.navbar-dark-theme .search-input {
+  color: #34413F !important;
+}
+
+.navbar-dark-theme .search-input:focus {
+  color: #34413F !important;
+}
+
+.navbar-dark-theme .btn-outline-light {
+  border-color: #F47C5A;
+  color: #DF6848;
+}
+
+.navbar-dark-theme .btn-outline-light:hover {
+  border-color: #F47C5A;
+  background: #F47C5A;
+  color: #FFFFFF;
+}
+
+.navbar-dark-theme .navbar-toggler {
+  color: #34413F !important;
+}
+
+.navbar-dark-theme .text-primary {
+  color: #F47C5A !important;
 }
 
 .fw-extrabold {

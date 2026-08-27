@@ -124,7 +124,7 @@ const fetchSeatsAndOpenModal = async () => {
       title: 'Lỗi sơ đồ ghế',
       text: 'Không thể lấy thông tin sơ đồ ghế, vui lòng thử lại sau.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   }
@@ -145,7 +145,7 @@ const proceedHoldSeats = async () => {
       title: 'Chưa chọn ghế',
       text: 'Vui lòng chọn ít nhất 1 ghế trước khi bấm giữ ghế.',
       icon: 'info',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -172,7 +172,7 @@ const proceedHoldSeats = async () => {
       title: 'Giữ ghế thất bại',
       text: err.response?.data?.error || 'Không thể giữ ghế, vui lòng thử chọn ghế khác.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   }

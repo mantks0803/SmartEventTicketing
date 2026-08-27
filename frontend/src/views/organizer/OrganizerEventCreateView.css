@@ -1,25 +1,61 @@
+.bg-page-custom {
+  background: #FFF9F5;
+}
+
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
+}
+
+.text-primary {
+  color: #F47C5A !important;
+}
+
+.bg-primary {
+  background-color: #F47C5A !important;
+}
+
+.btn-outline-primary {
+  border-color: #F47C5A;
+  color: #DF6848;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus {
+  border-color: #DF6848;
+  background: #DF6848;
+  color: #FFFFFF;
+}
+
+.form-control,
+.form-select {
+  border-color: #E5DED8;
+  color: #34413F;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #F47C5A;
+  box-shadow: 0 0 0 0.2rem rgba(244, 124, 90, 0.12);
 }
 
 .preset-card {
   min-height: 112px;
   padding: 16px;
-  border: 2px solid #E2E8F0;
+  border: 2px solid #E5DED8;
   border-radius: 16px;
   background: #FFFFFF;
   transition: all 0.2s ease;
 }
 
 .preset-card:hover {
-  border-color: #60A5FA;
+  border-color: #F4B6A3;
   transform: translateY(-2px);
 }
 
 .preset-card.active {
-  border-color: #2563EB;
-  background: #EFF6FF;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: #F47C5A;
+  background: #FFE9DF;
+  box-shadow: 0 0 0 3px rgba(244, 124, 90, 0.12);
 }
 
 .preset-icon {
@@ -27,8 +63,8 @@
   height: 42px;
   flex-shrink: 0;
   border-radius: 12px;
-  background: #DBEAFE;
-  color: #2563EB;
+  background: #E7F4F1;
+  color: #4FA39A;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,19 +76,21 @@
   max-height: 260px;
   object-fit: cover;
   border-radius: 14px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
 }
 
 .ticket-card {
-  background: #FAFCFF;
+  border-color: #E5DED8 !important;
+  background: #FFF9F5;
 }
 
 .stage-bar {
   padding: 10px;
   margin-bottom: 16px;
   border-radius: 10px;
-  background: #0F172A;
-  color: #FFFFFF;
+  border: 1px solid #CDE5E1;
+  background: #E7F4F1;
+  color: #347E77;
   font-size: 0.8rem;
   font-weight: 800;
   text-align: center;
@@ -63,16 +101,16 @@
   max-height: 58vh;
   padding: 10px;
   overflow: auto;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
   border-radius: 12px;
-  background: #F8FAFC;
+  background: #FFF9F5;
 }
 
 .preview-block {
   min-width: max-content;
   padding: 12px;
   margin-bottom: 14px;
-  border: 1px solid #BFDBFE;
+  border: 1px solid #F4C9BB;
   border-radius: 12px;
   background: #FFFFFF;
 }
@@ -87,7 +125,7 @@
 .preview-row-name {
   width: 42px;
   flex-shrink: 0;
-  color: #475569;
+  color: #6F7976;
   font-size: 0.72rem;
   font-weight: 700;
   text-align: right;
@@ -101,9 +139,9 @@
 .preview-seat {
   width: 22px;
   height: 22px;
-  border: 1px solid #2563EB;
+  border: 1px solid #F47C5A;
   border-radius: 5px;
-  color: #2563EB;
+  color: #F47C5A;
   font-size: 0.58rem;
   font-weight: 700;
   display: flex;

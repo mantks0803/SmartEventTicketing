@@ -181,7 +181,7 @@ const fetchProfile = async () => {
       title: 'Lỗi tải hồ sơ',
       text: 'Không thể lấy thông tin cá nhân. Vui lòng thử lại.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   }
@@ -203,7 +203,7 @@ const handleAvatarChange = async (e) => {
       title: 'Định dạng không hỗ trợ',
       text: 'Vui lòng chọn hình ảnh đuôi JPG, PNG hoặc WEBP.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -214,7 +214,7 @@ const handleAvatarChange = async (e) => {
       title: 'Dung lượng quá lớn',
       text: 'File hình ảnh vượt quá giới hạn 5MB.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -251,7 +251,7 @@ const handleAvatarChange = async (e) => {
       title: 'Upload thất bại',
       text: err.response?.data?.error || 'Lỗi tải ảnh đại diện lên Cloudinary.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   } finally {
@@ -289,7 +289,7 @@ const submitProfile = async () => {
       title: 'Cập nhật thất bại',
       text: err.response?.data?.detail || 'Không thể lưu thông tin cá nhân.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   } finally {
@@ -303,7 +303,7 @@ const submitPassword = async () => {
       title: 'Mật khẩu yếu',
       text: 'Mật khẩu mới phải chứa ít nhất 6 ký tự.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -314,7 +314,7 @@ const submitPassword = async () => {
       title: 'Không trùng khớp',
       text: 'Xác nhận mật khẩu mới không trùng khớp.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -340,7 +340,7 @@ const submitPassword = async () => {
       title: 'Đổi mật khẩu thất bại',
       text: err.response?.data?.error || 'Mật khẩu hiện tại không chính xác.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   } finally {
