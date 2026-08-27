@@ -355,16 +355,16 @@ const categoryLabels = {
 }
 
 const chartColors = [
-  '#2563EB',
-  '#10B981',
-  '#F59E0B',
-  '#8B5CF6',
-  '#06B6D4',
-  '#EF4444',
-  '#EC4899',
-  '#14B8A6',
-  '#6366F1',
-  '#84CC16',
+  '#F47C5A',
+  '#4FA39A',
+  '#FFD166',
+  '#79A98D',
+  '#EC9D83',
+  '#D95D73',
+  '#E7B25C',
+  '#69B8AF',
+  '#C98372',
+  '#91B8A3',
 ]
 
 const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0))
@@ -406,9 +406,9 @@ const monthlyChartData = computed(() => ({
     {
       label: 'Doanh thu',
       data: (report.value.revenue_by_month || []).map((item) => Number(item.total_revenue || 0)),
-      borderColor: '#2563EB',
-      backgroundColor: 'rgba(37, 99, 235, 0.14)',
-      pointBackgroundColor: '#2563EB',
+      borderColor: '#F47C5A',
+      backgroundColor: 'rgba(244, 124, 90, 0.14)',
+      pointBackgroundColor: '#F47C5A',
       pointRadius: 4,
       borderWidth: 3,
       tension: 0.3,
@@ -438,7 +438,7 @@ const organizerChartData = computed(() => ({
       data: (report.value.revenue_by_organizer || []).map((item) =>
         Number(item.total_revenue || 0),
       ),
-      backgroundColor: '#10B981',
+      backgroundColor: '#4FA39A',
       borderRadius: 7,
     },
   ],
@@ -450,7 +450,7 @@ const eventChartData = computed(() => ({
     {
       label: 'Doanh thu',
       data: (report.value.revenue_by_event || []).map((item) => Number(item.total_revenue || 0)),
-      backgroundColor: '#8B5CF6',
+      backgroundColor: '#FFD166',
       borderRadius: 7,
     },
   ],
@@ -558,7 +558,7 @@ const validateDateRange = async () => {
       title: 'Khoảng ngày không hợp lệ',
       text: 'Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' },
     })
 

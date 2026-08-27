@@ -101,7 +101,7 @@ const handleLogin = async () => {
       title: 'Thiếu thông tin',
       text: 'Vui lòng điền đầy đủ Tên đăng nhập/Email và Mật khẩu.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
     return
@@ -141,7 +141,7 @@ const handleLogin = async () => {
       title: 'Đăng nhập thất bại',
       text: result.message || 'Tài khoản hoặc mật khẩu không chính xác.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   }

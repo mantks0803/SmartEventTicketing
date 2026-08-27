@@ -421,7 +421,7 @@ const applyFilters = () => {
       title: 'Khoảng ngày không hợp lệ',
       text: 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.',
       icon: 'warning',
-      confirmButtonColor: '#2563eb',
+      confirmButtonColor: '#F47C5A',
     })
     return
   }
@@ -494,7 +494,7 @@ const confirmComplete = async (payout, detailIsOpen = false) => {
       title: 'Đã quyết toán',
       text: response.data.message || 'Trạng thái quyết toán đã được cập nhật.',
       icon: 'success',
-      confirmButtonColor: '#2563eb',
+      confirmButtonColor: '#F47C5A',
     })
 
     await refreshData()

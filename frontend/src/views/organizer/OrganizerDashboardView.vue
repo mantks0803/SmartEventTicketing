@@ -366,7 +366,7 @@ const handleCheckIn = async () => {
       title: 'Thiếu mã QR',
       text: 'Vui lòng nhập hoặc quét mã vé QR.',
       icon: 'warning',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: {
         popup: 'rounded-4'
       }

@@ -1,5 +1,5 @@
 .admin-users-page {
-  background: #f8fafc;
+  background: #fff9f5;
 }
 
 .admin-main-column {
@@ -14,7 +14,7 @@
 }
 
 .admin-label {
-  color: #2563eb;
+  color: #f47c5a;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 1.5px;
@@ -32,10 +32,10 @@
   align-items: center;
   gap: 13px;
   padding: 18px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5ded8;
   border-radius: 16px;
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 8px 20px rgba(52, 65, 63, 0.04);
 }
 
 .user-summary-card small,
@@ -44,13 +44,13 @@
 }
 
 .user-summary-card small {
-  color: #64748b;
+  color: #6f7976;
   white-space: nowrap;
 }
 
 .user-summary-card strong {
   margin-top: 2px;
-  color: #0f172a;
+  color: #34413f;
   font-size: 1.4rem;
 }
 
@@ -66,18 +66,18 @@
 }
 
 .icon-blue {
-  color: #2563eb;
-  background: #dbeafe;
+  color: #f47c5a;
+  background: #ffe9df;
 }
 
 .icon-cyan {
-  color: #0891b2;
-  background: #cffafe;
+  color: #4fa39a;
+  background: #e7f4f1;
 }
 
 .icon-purple {
-  color: #7c3aed;
-  background: #ede9fe;
+  color: #df6848;
+  background: #fff0e9;
 }
 
 .icon-red {
@@ -88,10 +88,10 @@
 .filter-card,
 .content-card {
   padding: 22px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5ded8;
   border-radius: 18px;
   background: #ffffff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8px 24px rgba(52, 65, 63, 0.05);
 }
 
 .content-card {
@@ -99,7 +99,7 @@
 }
 
 .user-table th {
-  color: #64748b;
+  color: #6f7976;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -128,7 +128,7 @@
 .user-cell small,
 .contact-cell small {
   margin-top: 2px;
-  color: #64748b;
+  color: #6f7976;
   font-size: 0.75rem;
 }
 
@@ -136,10 +136,10 @@
   width: 43px;
   height: 43px;
   flex: 0 0 43px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5ded8;
   border-radius: 50%;
   object-fit: cover;
-  background: #f1f5f9;
+  background: #f7f2ee;
 }
 
 .contact-cell {
@@ -157,13 +157,13 @@
 }
 
 .role-customer {
-  color: #1d4ed8;
-  background: #dbeafe;
+  color: #df6848;
+  background: #ffe9df;
 }
 
 .role-organizer {
-  color: #7c3aed;
-  background: #ede9fe;
+  color: #2f8178;
+  background: #e7f4f1;
 }
 
 .role-admin {
@@ -195,7 +195,7 @@
 }
 
 .empty-state {
-  color: #2563eb;
+  color: #f47c5a;
 }
 
 .empty-state > i {
@@ -212,22 +212,22 @@
   width: 82px;
   height: 82px;
   flex: 0 0 82px;
-  border: 2px solid #e2e8f0;
+  border: 2px solid #e5ded8;
   border-radius: 50%;
   object-fit: cover;
-  background: #f1f5f9;
+  background: #f7f2ee;
 }
 
 .detail-section {
   padding: 18px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5ded8;
   border-radius: 14px;
-  background: #f8fafc;
+  background: #fff9f5;
 }
 
 .detail-section h6 {
   margin-bottom: 14px;
-  color: #0f172a;
+  color: #34413f;
   font-weight: 700;
 }
 
@@ -240,14 +240,14 @@
 
 .info-item small,
 .detail-stat small {
-  color: #64748b;
+  color: #6f7976;
   font-size: 0.75rem;
 }
 
 .info-item strong,
 .detail-stat strong {
   margin-top: 4px;
-  color: #0f172a;
+  color: #34413f;
   overflow-wrap: anywhere;
 }
 
@@ -259,9 +259,42 @@
 
 .detail-stat {
   padding: 13px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5ded8;
   border-radius: 11px;
   background: #ffffff;
+}
+
+.admin-users-page .btn-primary {
+  border-color: #f47c5a;
+  background: #f47c5a;
+}
+
+.admin-users-page .btn-primary:hover,
+.admin-users-page .btn-primary:focus {
+  border-color: #df6848;
+  background: #df6848;
+}
+
+.admin-users-page .btn-outline-primary {
+  border-color: #f47c5a;
+  color: #df6848;
+}
+
+.admin-users-page .btn-outline-primary:hover {
+  border-color: #f47c5a;
+  color: #ffffff;
+  background: #f47c5a;
+}
+
+.admin-users-page .text-primary,
+.admin-users-page .spinner-border.text-primary {
+  color: #f47c5a !important;
+}
+
+.admin-users-page .form-control:focus,
+.admin-users-page .form-select:focus {
+  border-color: #f47c5a;
+  box-shadow: 0 0 0 0.2rem rgba(244, 124, 90, 0.14);
 }
 
 .detail-stat-wide {

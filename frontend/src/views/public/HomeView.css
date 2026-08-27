@@ -4,19 +4,34 @@
 
 .btn-white {
   background-color: #FFFFFF;
-  color: #334155;
+  color: #34413F;
 }
 
 .border-slate {
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
 }
 
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
 }
 
 .bg-blue-subtle {
-  background-color: #EFF6FF;
+  background-color: #E7F4F1;
+}
+
+.bg-page-custom {
+  background-color: #FFF9F5;
+}
+
+.btn-white:hover {
+  color: #DF6848;
+  border-color: #F47C5A;
+  background-color: #FFE9DF;
+}
+
+.text-primary,
+.text-primary-custom {
+  color: #F47C5A !important;
 }
 
 .fs-7 {

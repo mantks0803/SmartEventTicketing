@@ -3,10 +3,10 @@
   top: 92px;
   margin-right: -8px;
   padding: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5ded8;
   border-radius: 16px;
   background: #ffffff;
-  box-shadow: 0 7px 20px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 7px 20px rgba(52, 65, 63, 0.05);
 }
 
 .admin-sidebar-heading {
@@ -14,17 +14,17 @@
   align-items: center;
   gap: 9px;
   padding: 2px 2px 13px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e5ded8;
 }
 
 .admin-sidebar-heading h5 {
-  color: #0f172a;
+  color: #34413f;
   font-size: 0.95rem;
   font-weight: 700;
 }
 
 .admin-sidebar-heading small {
-  color: #64748b;
+  color: #6f7976;
   font-size: 0.67rem;
 }
 
@@ -36,8 +36,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  color: #2563eb;
-  background: #dbeafe;
+  color: #f47c5a;
+  background: #ffe9df;
   font-size: 1rem;
 }
 
@@ -56,20 +56,20 @@
   padding: 8px;
   border: 1px solid transparent;
   border-radius: 10px;
-  color: #334155;
+  color: #34413f;
   text-decoration: none;
   transition: 0.18s ease;
 }
 
 .admin-menu-item:hover {
-  color: #1d4ed8;
-  background: #f8fafc;
+  color: #df6848;
+  background: #fff9f5;
 }
 
 .admin-menu-item.active {
-  border-color: #bfdbfe;
-  color: #1d4ed8;
-  background: #eff6ff;
+  border-color: #f6c5b5;
+  color: #df6848;
+  background: #ffe9df;
 }
 
 .admin-menu-icon {
@@ -79,13 +79,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 9px;
-  color: #475569;
-  background: #f1f5f9;
+  color: #6f7976;
+  background: #f7f2ee;
 }
 
 .admin-menu-item.active .admin-menu-icon {
-  color: #2563eb;
-  background: #dbeafe;
+  color: #f47c5a;
+  background: #ffffff;
 }
 
 .admin-menu-item strong,
@@ -99,18 +99,18 @@
 
 .admin-menu-item small {
   margin-top: 2px;
-  color: #64748b;
+  color: #6f7976;
   font-size: 0.62rem;
 }
 
 .admin-menu-arrow {
-  color: #94a3b8;
+  color: #9a948f;
   font-size: 0.78rem;
 }
 
 .admin-sidebar-divider {
   margin: 8px 2px 0;
-  color: #94a3b8;
+  color: #9a948f;
   font-size: 0.67rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -123,7 +123,7 @@
 }
 
 .admin-menu-item.disabled:hover {
-  color: #334155;
+  color: #34413f;
   background: transparent;
 }
 

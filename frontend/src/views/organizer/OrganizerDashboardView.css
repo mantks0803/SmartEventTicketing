@@ -1,24 +1,41 @@
 .organizer-page {
-  background:
-    radial-gradient(
-      circle at top right,
-      rgba(37, 99, 235, 0.1),
-      transparent 30%
-    ),
-    #F8FAFC;
+  background: #FFF9F5;
+}
+
+.organizer-page .btn-primary {
+  border-color: #F47C5A;
+  background: #F47C5A;
+}
+
+.organizer-page .btn-primary:hover,
+.organizer-page .btn-primary:focus {
+  border-color: #DF6848;
+  background: #DF6848;
+}
+
+.organizer-page .btn-outline-primary {
+  border-color: #F47C5A;
+  color: #DF6848;
+}
+
+.organizer-page .btn-outline-primary:hover,
+.organizer-page .btn-outline-primary:focus {
+  border-color: #DF6848;
+  background: #DF6848;
+  color: #FFFFFF;
+}
+
+.organizer-page .text-primary {
+  color: #F47C5A !important;
 }
 
 .welcome-card {
   min-height: 180px;
   padding: 34px;
   border-radius: 24px;
-  background:
-    linear-gradient(
-      120deg,
-      rgba(15, 23, 42, 0.98),
-      rgba(30, 64, 175, 0.94)
-    );
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+  border: 1px solid #F4C9BB;
+  background: #FFE9DF;
+  box-shadow: 0 12px 30px rgba(244, 124, 90, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,23 +43,31 @@
 }
 
 .welcome-label {
-  color: #93C5FD;
+  color: #DF6848;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 1.6px;
 }
 
+.welcome-card .text-white {
+  color: #34413F !important;
+}
+
+.welcome-card .text-white-50 {
+  color: #6F7976 !important;
+}
+
 .create-event-btn {
   flex-shrink: 0;
   border: none;
-  background: #FF6B35;
+  background: #F47C5A;
   color: #FFFFFF;
   font-weight: 700;
-  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.35);
+  box-shadow: 0 8px 18px rgba(244, 124, 90, 0.24);
 }
 
 .create-event-btn:hover {
-  background: #E85A24;
+  background: #DF6848;
   color: #FFFFFF;
   transform: translateY(-2px);
 }
@@ -50,10 +75,10 @@
 .sidebar-card,
 .content-card {
   padding: 22px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
   border-radius: 20px;
   background: #FFFFFF;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8px 22px rgba(52, 65, 63, 0.05);
 }
 
 .sidebar-card {
@@ -64,7 +89,7 @@
 .organizer-info {
   padding-bottom: 20px;
   margin-bottom: 20px;
-  border-bottom: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E5DED8;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -75,8 +100,8 @@
   height: 46px;
   flex-shrink: 0;
   border-radius: 14px;
-  background: #DBEAFE;
-  color: #2563EB;
+  background: #E7F4F1;
+  color: #4FA39A;
   font-size: 1.2rem;
   display: flex;
   align-items: center;
@@ -85,7 +110,7 @@
 
 .sidebar-title {
   margin-bottom: 8px;
-  color: #94A3B8;
+  color: #6F7976;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 1.2px;
@@ -98,7 +123,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: #475569;
+  color: #6F7976;
   font-weight: 600;
   text-align: left;
   display: flex;
@@ -107,21 +132,21 @@
 }
 
 .sidebar-link:hover {
-  background: #F1F5F9;
-  color: #2563EB;
+  background: #FFF3ED;
+  color: #DF6848;
 }
 
 .sidebar-link.active {
-  background: #EFF6FF;
-  color: #2563EB;
+  background: #E7F4F1;
+  color: #347E77;
 }
 
 .sidebar-count {
   padding: 2px 8px;
   margin-left: auto;
   border-radius: 999px;
-  background: #DBEAFE;
-  color: #1D4ED8;
+  background: #FFE9DF;
+  color: #DF6848;
   font-size: 0.72rem;
 }
 
@@ -135,10 +160,10 @@
 .stat-card {
   min-height: 112px;
   padding: 20px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
   border-radius: 18px;
   background: #FFFFFF;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 8px 20px rgba(52, 65, 63, 0.04);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -156,8 +181,8 @@
 }
 
 .icon-blue {
-  background: #DBEAFE;
-  color: #2563EB;
+  background: #FFE9DF;
+  color: #F47C5A;
 }
 
 .icon-green {
@@ -171,8 +196,8 @@
 }
 
 .icon-purple {
-  background: #EDE9FE;
-  color: #7C3AED;
+  background: #E7F4F1;
+  color: #4FA39A;
 }
 
 /* EventList là component con nên dùng :deep để scoped CSS áp dụng đúng. */
@@ -184,10 +209,10 @@
 :deep(.event-row) {
   min-width: 0;
   padding: 12px;
-  border: 1px solid #E2E8F0;
+  border: 1px solid #E5DED8;
   border-radius: 16px;
   background: #FFFFFF;
-  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 5px 16px rgba(52, 65, 63, 0.04);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -196,8 +221,8 @@
 }
 
 :deep(.event-row:hover) {
-  border-color: #BFDBFE;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+  border-color: #F4B6A3;
+  box-shadow: 0 10px 24px rgba(244, 124, 90, 0.09);
   transform: translateY(-1px);
 }
 
@@ -207,7 +232,7 @@
   flex-shrink: 0;
   border-radius: 12px;
   object-fit: cover;
-  background: #E2E8F0;
+  background: #F1EBE6;
 }
 
 :deep(.event-main) {
@@ -217,7 +242,7 @@
 
 :deep(.event-meta) {
   margin-top: 7px;
-  color: #64748B;
+  color: #6F7976;
   font-size: 0.8rem;
   display: flex;
   flex-wrap: wrap;
@@ -255,7 +280,7 @@
 
 :deep(.empty-icon),
 .checkin-icon {
-  color: #2563EB;
+  color: #F47C5A;
   font-size: 3rem;
 }
 
@@ -264,14 +289,14 @@
   height: 82px;
   margin: 0 auto;
   border-radius: 24px;
-  background: #EFF6FF;
+  background: #FFE9DF;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
 }
 
 @media (max-width: 991px) {

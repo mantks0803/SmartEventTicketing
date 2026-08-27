@@ -71,7 +71,7 @@ onMounted(async () => {
         title: 'Đơn hàng không thể thanh toán',
         text: `Trạng thái hiện tại của đơn là ${order.value.status}.`,
         icon: 'info',
-        confirmButtonColor: '#2563EB',
+        confirmButtonColor: '#F47C5A',
         customClass: { popup: 'rounded-4' }
       })
       router.push('/')
@@ -84,7 +84,7 @@ onMounted(async () => {
       title: 'Lỗi tải đơn hàng',
       text: 'Không thể lấy thông tin đơn hàng hoặc đơn hàng không tồn tại.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     }).then(() => {
       router.push('/')
@@ -138,7 +138,7 @@ const handleExpiredOrder = async () => {
     text: 'Đơn hàng đã hết hạn và ghế được trả về trạng thái trống.',
     icon: 'warning',
     confirmButtonText: 'Chọn lại ghế',
-    confirmButtonColor: '#2563EB',
+    confirmButtonColor: '#F47C5A',
     customClass: { popup: 'rounded-4' }
   })
   router.push('/')
@@ -156,7 +156,7 @@ const handlePayOS = async () => {
       title: 'Thanh toán thất bại',
       text: 'Không thể khởi tạo liên kết thanh toán PayOS. Vui lòng thử lại.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   } finally {

@@ -40,7 +40,7 @@
               type="text"
               class="form-control bg-light"
               :class="{ 'is-invalid': errors.name }"
-              :placeholder="form.role === 'CUSTOMER' ? 'Nguyễn Văn A' : 'Nguyễn Văn A (Đại diện BTC)'"
+              :placeholder="form.role === 'CUSTOMER' ? '.....' : '.... (Đại diện BTC)'"
             />
             <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
           </div>
@@ -52,7 +52,7 @@
               type="text"
               class="form-control bg-light"
               :class="{ 'is-invalid': errors.company_name }"
-              placeholder="Công ty TNHH Sự kiện Sài Gòn"
+              placeholder="Công ty...."
             />
             <div v-if="errors.company_name" class="invalid-feedback">{{ errors.company_name }}</div>
           </div>
@@ -76,7 +76,7 @@
               type="text"
               class="form-control bg-light"
               :class="{ 'is-invalid': errors.username }"
-              placeholder="nguyenvana"
+              placeholder="..."
             />
             <div v-if="errors.username" class="invalid-feedback">{{ errors.username }}</div>
           </div>
@@ -100,7 +100,7 @@
               type="tel"
               class="form-control bg-light"
               :class="{ 'is-invalid': errors.phone_number }"
-              placeholder="0912345678"
+              placeholder="....."
             />
             <div v-if="errors.phone_number" class="invalid-feedback">{{ errors.phone_number }}</div>
           </div>
@@ -328,7 +328,7 @@ const handleRegister = async () => {
       text: 'Tài khoản SmartTicket của bạn đã sẵn sàng sử dụng.',
       icon: 'success',
       confirmButtonText: 'Đăng nhập ngay',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
 
@@ -341,7 +341,7 @@ const handleRegister = async () => {
       title: 'Đăng ký thất bại',
       text: result.message || 'Vui lòng kiểm tra lại thông tin đăng ký.',
       icon: 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' }
     })
   }

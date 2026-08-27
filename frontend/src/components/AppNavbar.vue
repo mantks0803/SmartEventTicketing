@@ -290,7 +290,7 @@ const handleLogout = async () => {
     confirmButtonText: 'Đăng xuất',
     cancelButtonText: 'Hủy',
     confirmButtonColor: '#EF4444',
-    cancelButtonColor: '#64748B',
+    cancelButtonColor: '#6F7976',
     customClass: {
       popup: 'rounded-4'
     }

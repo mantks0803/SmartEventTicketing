@@ -13,7 +13,7 @@
 }
 
 .duo-overlay {
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.2) 100%);
+  background: linear-gradient(to top, rgba(52, 65, 63, 0.84) 0%, rgba(52, 65, 63, 0.12) 100%);
 }
 
 .fw-extrabold {
@@ -25,7 +25,7 @@
 }
 
 .text-slate-light {
-  color: #CBD5E1;
+  color: #F5F7F6;
 }
 
 .text-shadow {
@@ -39,9 +39,9 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.75);
-  color: white;
-  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4FA39A;
+  border: 1px solid #E5DED8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,7 +51,8 @@
 }
 
 .nav-arrow:hover {
-  background: rgba(37, 99, 235, 0.9);
+  background: #F47C5A;
+  color: #FFFFFF;
 }
 
 .nav-prev {
@@ -66,7 +67,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #CBD5E1;
+  background: #D8D2CC;
   border: none;
   padding: 0;
   cursor: pointer;
@@ -76,5 +77,5 @@
 .dot-indicator.active {
   width: 24px;
   border-radius: 5px;
-  background: #2563EB;
+  background: #F47C5A;
 }

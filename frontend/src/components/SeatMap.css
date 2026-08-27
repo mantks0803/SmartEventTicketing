@@ -3,8 +3,8 @@
 }
 
 .stage-bar {
-  background-color: #0F172A;
-  color: #FFFFFF;
+  background-color: #E7F4F1;
+  color: #3F827B;
   border-radius: 12px;
   padding: 10px 20px;
   font-weight: 800;
@@ -23,7 +23,7 @@
   margin-bottom: 20px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #334155;
+  color: #34413F;
 }
 
 .legend-item {
@@ -43,8 +43,8 @@
   overflow: auto;
   padding: 8px;
   border-radius: 12px;
-  background-color: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background-color: #FFF9F5;
+  border: 1px solid #E5DED8;
 }
 
 .block-card {
@@ -54,7 +54,7 @@
   padding: 16px;
   margin-bottom: 20px;
   background-color: #FFFFFF;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 3px 10px rgba(86, 105, 100, 0.04);
 }
 
 .seat-row {
@@ -68,7 +68,7 @@
   min-width: 54px;
   font-weight: 700;
   font-size: 0.825rem;
-  color: #475569;
+  color: #596562;
   text-align: right;
 }
 
@@ -105,10 +105,10 @@
 }
 
 .seat-btn-item.seat-selected {
-  background-color: #1976D2 !important;
-  border-color: #1976D2 !important;
+  background-color: #F47C5A !important;
+  border-color: #F47C5A !important;
   color: #FFFFFF !important;
-  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.3);
+  box-shadow: 0 0 0 3px rgba(244, 124, 90, 0.24);
 }
 
 .seat-btn-item.seat-locked {
@@ -120,15 +120,15 @@
 }
 
 .seat-btn-item.seat-sold {
-  background-color: #CBD5E1 !important;
-  border-color: #64748B !important;
-  color: #475569 !important;
+  background-color: #D5D9D8 !important;
+  border-color: #909B98 !important;
+  color: #596562 !important;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .text-slate-900 {
-  color: #0F172A;
+  color: #34413F;
 }
 
 .fs-8 {

@@ -1,9 +1,13 @@
 .auth-container {
   min-height: calc(100vh - 160px);
+  background-color: #FFF9F5;
 }
 
 .auth-card {
   max-width: 440px;
+  border: 1px solid #E5DED8 !important;
+  background-color: #FFFFFF;
+  box-shadow: 0 18px 44px rgba(84, 67, 57, 0.12) !important;
 }
 
 .icon-circle {
@@ -13,8 +17,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #FFE9DF !important;
+  color: #F47C5A !important;
 }
 
 .btn-toggle-eye {
   cursor: pointer;
+}
+
+.form-control.bg-light,
+.input-group-text.bg-light {
+  background-color: #FFF9F5 !important;
+  border-color: #E5DED8;
+}
+
+.form-control:focus {
+  border-color: #F47C5A;
+  box-shadow: 0 0 0 0.2rem rgba(244, 124, 90, 0.14);
+}
+
+.text-primary {
+  color: #F47C5A !important;
 }

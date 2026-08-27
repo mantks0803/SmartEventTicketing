@@ -418,7 +418,7 @@ const updateEventStatus = async (event, action) => {
       title: isConflict ? 'Sự kiện đã được xử lý' : 'Cập nhật thất bại',
       text: getErrorMessage(error, 'Vui lòng thử lại sau.'),
       icon: isConflict ? 'info' : 'error',
-      confirmButtonColor: '#2563EB',
+      confirmButtonColor: '#F47C5A',
       customClass: { popup: 'rounded-4' },
     })
 
