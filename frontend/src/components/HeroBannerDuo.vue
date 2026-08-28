@@ -92,7 +92,7 @@ const startTimer = () => {
     if (!isHovered.value && pairs.value.length > 1) {
       currentPairIndex.value = (currentPairIndex.value + 1) % pairs.value.length
     }
-  }, 10000)
+  }, 5000)
 }
 
 const stopTimer = () => {
