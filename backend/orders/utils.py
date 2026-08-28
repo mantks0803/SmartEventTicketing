@@ -1,7 +1,11 @@
 import logging
+from email.message import MIMEPart
+from io import BytesIO
+
+import qrcode
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from django.utils.html import escape
 
@@ -13,6 +17,23 @@ logger = logging.getLogger(__name__)
 
 def format_vnd(value):
     return f'{value:,.0f}'.replace(',', '.')
+
+
+def create_ticket_qr_image(ticket_code):
+    qr = qrcode.QRCode(
+        box_size=8,
+        border=3,
+    )
+    qr.add_data(ticket_code)
+    qr.make(fit=True)
+
+    image = qr.make_image(
+        fill_color='black',
+        back_color='white',
+    )
+    image_buffer = BytesIO()
+    image.save(image_buffer, format='PNG')
+    return image_buffer.getvalue()
 
 
 def send_payment_success_email(order_id):
@@ -68,26 +89,87 @@ def send_payment_success_email(order_id):
             ).strftime('%H:%M - %d/%m/%Y')
 
         ticket_text_lines = []
-        ticket_html_rows = []
+        ticket_html_cards = []
+        ticket_qr_images = []
 
         for ticket in tickets:
             seat_name = ticket.seat.seat_name
             ticket_type_name = ticket.ticket_type.name
+            content_id = f'ticket-qr-{ticket.id}'
 
             ticket_text_lines.append(
-                f'- {ticket_type_name} - Ghế {seat_name}'
+                f'- {ticket_type_name} - Ghế {seat_name}\n'
+                f'  Mã vé: {ticket.qr_code}'
             )
 
-            ticket_html_rows.append(
+            qr_image = MIMEPart()
+            qr_image.set_content(
+                create_ticket_qr_image(ticket.qr_code),
+                maintype='image',
+                subtype='png',
+                disposition='inline',
+                cid=f'<{content_id}>',
+            )
+            ticket_qr_images.append(qr_image)
+
+            ticket_html_cards.append(
                 f'''
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
+                <div style="
+                    margin-bottom: 18px;
+                    padding: 20px;
+                    border: 1px solid #f2d7cc;
+                    border-radius: 16px;
+                    background: #ffffff;
+                    text-align: center;
+                ">
+                    <div style="
+                        margin-bottom: 6px;
+                        color: #f47c5a;
+                        font-size: 18px;
+                        font-weight: bold;
+                    ">
                         {escape(ticket_type_name)}
-                    </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #e2e8f0;">
-                        {escape(seat_name)}
-                    </td>
-                </tr>
+                    </div>
+
+                    <div style="margin-bottom: 14px; color: #52605f;">
+                        Ghế <strong>{escape(seat_name)}</strong>
+                    </div>
+
+                    <img
+                        src="cid:{content_id}"
+                        width="190"
+                        alt="Mã QR vé {escape(seat_name)}"
+                        style="
+                            display: block;
+                            width: 190px;
+                            max-width: 100%;
+                            height: auto;
+                            margin: 0 auto 14px;
+                        "
+                    >
+
+                    <div style="
+                        margin-bottom: 6px;
+                        color: #697675;
+                        font-size: 12px;
+                    ">
+                        Mã vé dùng để check-in thủ công
+                    </div>
+
+                    <div style="
+                        padding: 10px;
+                        border-radius: 10px;
+                        background: #fff4ee;
+                        color: #263238;
+                        font-family: Consolas, monospace;
+                        font-size: 13px;
+                        font-weight: bold;
+                        overflow-wrap: anywhere;
+                        word-break: break-all;
+                    ">
+                        {escape(ticket.qr_code)}
+                    </div>
+                </div>
                 '''
             )
 
@@ -104,7 +186,8 @@ def send_payment_success_email(order_id):
             f'Tổng tiền: {format_vnd(order.total_amount)} VNĐ\n\n'
             f'Danh sách vé:\n'
             f'{"\n".join(ticket_text_lines)}\n\n'
-            f'Xem mã QR vé tại: {ticket_url}\n\n'
+            f'Bạn có thể dùng mã vé phía trên để check-in thủ công.\n'
+            f'Xem lại vé tại: {ticket_url}\n\n'
             f'Vui lòng không chia sẻ mã QR vé cho người khác.\n\n'
             f'Cảm ơn bạn đã sử dụng SmartTicket!'
         )
@@ -119,21 +202,21 @@ def send_payment_success_email(order_id):
         <body style="
             margin: 0;
             padding: 0;
-            background: #f8fafc;
+            background: #fff9f5;
             font-family: Arial, sans-serif;
-            color: #0f172a;
+            color: #263238;
         ">
             <div style="
                 max-width: 620px;
                 margin: 30px auto;
                 background: #ffffff;
-                border: 1px solid #e2e8f0;
+                border: 1px solid #f2d7cc;
                 border-radius: 18px;
                 overflow: hidden;
             ">
                 <div style="
                     padding: 28px;
-                    background: linear-gradient(135deg, #0f172a, #1d4ed8);
+                    background: linear-gradient(135deg, #f47c5a, #ee9b73);
                     color: #ffffff;
                 ">
                     <div style="
@@ -145,7 +228,7 @@ def send_payment_success_email(order_id):
 
                     <div style="
                         margin-top: 8px;
-                        color: #bfdbfe;
+                        color: #fff4ee;
                     ">
                         Xác nhận thanh toán thành công
                     </div>
@@ -154,7 +237,7 @@ def send_payment_success_email(order_id):
                 <div style="padding: 28px;">
                     <h2 style="
                         margin-top: 0;
-                        color: #059669;
+                        color: #3f9188;
                     ">
                         Thanh toán thành công!
                     </h2>
@@ -172,7 +255,7 @@ def send_payment_success_email(order_id):
                         padding: 18px;
                         margin: 22px 0;
                         border-radius: 14px;
-                        background: #eff6ff;
+                        background: #fff4ee;
                     ">
                         <div style="margin-bottom: 8px;">
                             <strong>Sự kiện:</strong>
@@ -192,7 +275,7 @@ def send_payment_success_email(order_id):
                         <div>
                             <strong>Tổng tiền:</strong>
                             <span style="
-                                color: #2563eb;
+                                color: #e96343;
                                 font-size: 18px;
                                 font-weight: bold;
                             ">
@@ -201,27 +284,14 @@ def send_payment_success_email(order_id):
                         </div>
                     </div>
 
-                    <h3>Danh sách vé</h3>
+                    <h3>Vé điện tử và mã check-in</h3>
 
-                    <table style="
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 24px;
-                    ">
-                        <thead>
-                            <tr style="
-                                background: #f1f5f9;
-                                text-align: left;
-                            ">
-                                <th style="padding: 10px;">Loại vé</th>
-                                <th style="padding: 10px;">Ghế</th>
-                            </tr>
-                        </thead>
+                    <p style="color: #697675; line-height: 1.6;">
+                        Đưa mã QR cho ban tổ chức quét, hoặc đọc mã vé bên
+                        dưới QR để ban tổ chức nhập thủ công.
+                    </p>
 
-                        <tbody>
-                            {''.join(ticket_html_rows)}
-                        </tbody>
-                    </table>
+                    {''.join(ticket_html_cards)}
 
                     <div style="text-align: center; margin: 30px 0;">
                         <a
@@ -230,7 +300,7 @@ def send_payment_success_email(order_id):
                                 display: inline-block;
                                 padding: 14px 26px;
                                 border-radius: 999px;
-                                background: #2563eb;
+                                background: #4fa39a;
                                 color: #ffffff;
                                 text-decoration: none;
                                 font-weight: bold;
@@ -241,7 +311,7 @@ def send_payment_success_email(order_id):
                     </div>
 
                     <p style="
-                        color: #64748b;
+                        color: #697675;
                         font-size: 13px;
                         line-height: 1.6;
                     ">
@@ -254,14 +324,18 @@ def send_payment_success_email(order_id):
         </html>
         '''
 
-        sent_count = send_mail(
+        email = EmailMultiAlternatives(
             subject=subject,
-            message=text_message,
+            body=text_message,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[customer.email],
-            fail_silently=False,
-            html_message=html_message,
+            to=[customer.email],
         )
+        email.attach_alternative(html_message, 'text/html')
+
+        for qr_image in ticket_qr_images:
+            email.attach(qr_image)
+
+        sent_count = email.send(fail_silently=False)
 
         if sent_count == 1:
             logger.info(
