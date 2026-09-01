@@ -1,8 +1,8 @@
 import axios from 'axios'; 
-
+import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/'
 
 const apiClient = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api/',
+   baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/',
     headers: {
         'Content-Type': 'application/json'
     }
@@ -26,7 +26,6 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Token không hợp lệ hoặc hết hạn, xóa token và thông tin người dùng khỏi localStorage
       localStorage.removeItem('access_token')
       localStorage.removeItem('user_info')
     }
