@@ -1,6 +1,10 @@
 # ===== Project specific =====
 .env
 *.env
+.env.*
+!.env.example
+/database/backups/*
+!/database/backups/README.md
 venv/
 db.sqlite3
 db.sqlite3-journal

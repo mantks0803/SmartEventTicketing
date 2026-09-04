@@ -1,5 +1,7 @@
 # Báo cáo kiểm thử SmartEventTicketing
 
+> Báo cáo lịch sử của lần chạy ngày 19/08/2026. Ngày, môi trường, số lượng và kết quả bên dưới được giữ nguyên; không chạy lại kiểm thử trong lần sắp xếp tài liệu. Không dùng số liệu này để khẳng định trạng thái hiện tại của dự án.
+
 ## 1. Thông tin lần chạy gần nhất
 
 | Nội dung | Giá trị |
@@ -102,7 +104,7 @@ Do dùng mock, full backend test không tiêu tốn quota PayOS, Cloudinary, Gma
 
 ## 7. RAG evaluation gần nhất
 
-Báo cáo ngày 18/08/2026 ghi nhận 30 câu hỏi với Hit@4, source accuracy, no-answer accuracy và answer decision accuracy đều đạt 100%. Đây là snapshot trước khi một số knowledge Markdown được đồng bộ ngày 19/08/2026; cần rebuild index và chạy lại evaluation để có kết quả mới. Xem [RAG_EVALUATION_RESULT.md](RAG_EVALUATION_RESULT.md).
+Báo cáo ngày 18/08/2026 ghi nhận 30 câu hỏi với Hit@4, source accuracy, no-answer accuracy và answer decision accuracy đều đạt 100%. Đây là snapshot trước khi một số knowledge Markdown được đồng bộ ngày 19/08/2026; cần rebuild index và chạy lại evaluation để có kết quả mới. Xem [RAG_EVALUATION_RESULT.md](../docs/RAG_EVALUATION_RESULT.md).
 
 ## 8. GitHub Actions
 

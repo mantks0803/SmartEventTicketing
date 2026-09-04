@@ -1,5 +1,7 @@
 # Kế hoạch kiểm thử SmartEventTicketing
 
+Các phiên bản môi trường và kết quả đã ghi nhận thuộc lần kiểm thử trước; xem [báo cáo kiểm thử lịch sử](TEST_REPORT.md). Việc sắp xếp tài liệu không xác nhận lại trạng thái kiểm thử hiện tại.
+
 ## 1. Mục tiêu
 
 Kế hoạch kiểm tra các luồng cốt lõi của Customer, Organizer, Admin và AI Agent: xác thực, phân quyền, sự kiện, ghế, thanh toán, vé QR, báo cáo, quản trị và chatbot RAG.
