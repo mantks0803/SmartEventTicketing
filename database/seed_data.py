@@ -1,8 +1,11 @@
 import os
+import sys
 import django
 from datetime import timedelta
+from pathlib import Path
 from django.utils import timezone
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'backend'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 

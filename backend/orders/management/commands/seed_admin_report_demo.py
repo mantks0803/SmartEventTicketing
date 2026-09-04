@@ -148,7 +148,7 @@ class Command(BaseCommand):
         if self.demo_data_exists():
             raise CommandError(
                 'Dữ liệu demo đã tồn tại. Hãy chạy '
-                '"python seed_admin_report_demo.py --clear" trước.'
+                '"python manage.py seed_admin_report_demo --clear" trước.'
             )
 
         with transaction.atomic():

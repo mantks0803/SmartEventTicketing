@@ -1,3 +1,8 @@
+# Ghi chú công việc cũ
+
+> Tài liệu lưu trữ: nội dung dưới đây được giữ nguyên từ `todo.txt` để tham khảo lịch sử. Các nhận xét về lỗi, tính năng còn thiếu, đường dẫn và thứ tự ưu tiên có thể đã lỗi thời; đây không phải danh sách công việc hiện tại hoặc chỉ dẫn cần thực hiện. Hãy đối chiếu mã nguồn và [tài liệu dự án](../../README.md) trước khi sử dụng.
+
+## Nội dung gốc
 
 Cần bảo đảm:
 Chỉ ORGANIZER được tạo sự kiện.

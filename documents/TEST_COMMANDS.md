@@ -1,5 +1,7 @@
 # Lệnh kiểm thử SmartEventTicketing
 
+Xem [kế hoạch kiểm thử](TEST_PLAN.md) và [báo cáo kiểm thử lịch sử](TEST_REPORT.md). Các lệnh dưới đây là hướng dẫn chạy; việc sắp xếp tài liệu không chạy lại kiểm thử.
+
 ## 1. Chuẩn bị trên Windows Command Prompt
 
 ```bat
