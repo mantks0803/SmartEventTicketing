@@ -1,49 +1,46 @@
+import importlib.util
+from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 from unittest.mock import patch
 
-from django.core.management import call_command
-from django.core.management.base import CommandError
 from django.db import connection
 from django.db.models import Sum
 from django.db.models.functions import TruncMonth
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from rest_framework.test import APIClient
 
 from authentication.models import Customer, Organizer, User, UserType
 from events.models import Event, EventCategoryEnum, TicketType
-from orders.management.commands.seed_admin_report_demo import (
-    ADMIN_PASSWORD,
-    DEMO_DATABASE_NAME,
-    DEMO_EVENT_PREFIX,
-    DEMO_USER_PREFIX,
-    ORGANIZER_PASSWORD,
-)
 from orders.models import Order, OrderStatusEnum, Payment, Ticket
 from seating.models import Seat, SeatStatusEnum
 
 
+script_path = Path(__file__).resolve().parents[3] / 'database' / 'seed_admin_report_demo.py'
+spec = importlib.util.spec_from_file_location('seed_admin_report_demo', script_path)
+seed_demo = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(seed_demo)
+
+
 class SeedAdminReportDemoTests(TestCase):
-    def run_seed_command(self, *args):
+    def run_seed(self, clear=False):
         output = StringIO()
         with patch.dict(
             connection.settings_dict,
-            {'NAME': DEMO_DATABASE_NAME},
+            {'NAME': seed_demo.DEMO_DATABASE_NAME},
         ):
-            call_command(
-                'seed_admin_report_demo',
-                *args,
-                stdout=output,
-            )
+            with redirect_stdout(output):
+                seed_demo.run_seed(clear=clear)
         return output.getvalue()
 
     def test_seed_creates_complete_and_consistent_report_data(self):
-        self.run_seed_command()
+        self.run_seed()
 
         demo_users = User.objects.filter(
-            username__startswith=DEMO_USER_PREFIX,
+            username__startswith=seed_demo.DEMO_USER_PREFIX,
         )
         demo_events = Event.objects.filter(
-            title__startswith=DEMO_EVENT_PREFIX,
+            title__startswith=seed_demo.DEMO_EVENT_PREFIX,
         )
         demo_orders = Order.objects.filter(event__in=demo_events)
         demo_tickets = Ticket.objects.filter(order__in=demo_orders)
@@ -106,8 +103,8 @@ class SeedAdminReportDemoTests(TestCase):
         )
         self.assertEqual(admin.type, UserType.ADMIN)
         self.assertTrue(admin.is_superuser)
-        self.assertTrue(admin.check_password(ADMIN_PASSWORD))
-        self.assertTrue(organizer_user.check_password(ORGANIZER_PASSWORD))
+        self.assertTrue(admin.check_password(seed_demo.ADMIN_PASSWORD))
+        self.assertTrue(organizer_user.check_password(seed_demo.ORGANIZER_PASSWORD))
 
         client = APIClient()
         client.force_authenticate(admin)
@@ -131,29 +128,43 @@ class SeedAdminReportDemoTests(TestCase):
             name='Normal User',
             password='NormalUser@123',
         )
-        self.run_seed_command()
+        self.run_seed()
 
-        self.run_seed_command('--clear')
+        self.run_seed(clear=True)
 
         self.assertTrue(User.objects.filter(id=normal_user.id).exists())
         self.assertFalse(
             User.objects.filter(
-                username__startswith=DEMO_USER_PREFIX,
+                username__startswith=seed_demo.DEMO_USER_PREFIX,
             ).exists()
         )
         self.assertFalse(
             Event.objects.filter(
-                title__startswith=DEMO_EVENT_PREFIX,
+                title__startswith=seed_demo.DEMO_EVENT_PREFIX,
             ).exists()
         )
 
-    def test_command_refuses_to_run_on_main_database(self):
+    def test_seed_refuses_to_duplicate_existing_demo_data(self):
+        self.run_seed()
+
+        with self.assertRaisesMessage(ValueError, 'Dữ liệu demo đã tồn tại'):
+            self.run_seed()
+
+        self.assertEqual(Order.objects.count(), 60)
+        self.assertEqual(Ticket.objects.count(), 120)
+
+
+class SeedAdminReportDemoSafetyTests(SimpleTestCase):
+    def test_seed_and_clear_refuse_to_run_on_main_database(self):
         with patch.dict(
             connection.settings_dict,
             {'NAME': 'smart_booking_db'},
         ):
-            with self.assertRaises(CommandError):
-                call_command(
-                    'seed_admin_report_demo',
-                    stdout=StringIO(),
-                )
+            for clear in (False, True):
+                with self.subTest(clear=clear):
+                    with self.assertRaisesMessage(ValueError, 'Script chỉ được chạy'):
+                        seed_demo.run_seed(clear=clear)
+
+    def test_import_does_not_register_a_django_management_command(self):
+        self.assertFalse(hasattr(seed_demo, 'Command'))
+        self.assertTrue(callable(seed_demo.run_seed))

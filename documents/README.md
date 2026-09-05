@@ -1,25 +1,18 @@
 # Tài liệu SmartEventTicketing
 
-## Hướng dẫn dự án
+| Nhu cầu | Đọc tại |
+|---|---|
+| Hiểu tổng quan và chức năng | [README chính](../README.md) |
+| Cài đặt lần đầu, chạy lại, cấu hình dịch vụ | [SETUP](SETUP.md) |
+| Nạp dữ liệu mẫu, thêm báo cáo, chuyển database | [Database](../database/README.md) |
+| Cấu hình và chạy giao diện | [Frontend](../frontend/README.md) |
+| Chuẩn bị và sử dụng chatbot | [AI Agent](../backend/ai_agent/README.md) |
+| Chạy test | [Lệnh kiểm thử](TEST_COMMANDS.md) |
+| Xem kịch bản và kết quả test | [Kế hoạch](TEST_PLAN.md) / [Báo cáo](TEST_REPORT.md) |
+| Thử thanh toán local không dùng tiền thật | [Hướng dẫn thanh toán](PAYMENT_TEST.md) |
+| Đánh giá RAG | [Hướng dẫn](../docs/RAG_EVALUATION.md) / [Kết quả](../docs/RAG_EVALUATION_RESULT.md) |
+| Lưu bản sao database riêng tư | [Backup](../database/backups/README.md) |
 
-- [Tổng quan và cách chạy dự án](../README.md).
-- [Database và dữ liệu mẫu](../database/README.md).
-- [AI Agent và chatbot](../backend/ai_agent/README.md).
+Báo cáo test/evaluation là kết quả theo lần chạy, không tự cập nhật theo source mới. Chỉ dùng giả lập thanh toán ở local; không tắt kiểm tra chữ ký PayOS trên server public.
 
-## Kiểm thử
-
-- [Kế hoạch kiểm thử](TEST_PLAN.md): phạm vi và các kịch bản chính.
-- [Lệnh kiểm thử](TEST_COMMANDS.md): lệnh backend, frontend và RAG evaluation.
-- [Báo cáo kiểm thử lịch sử](TEST_REPORT.md): kết quả ghi nhận ngày 19/08/2026, không phải kết quả chạy lại hiện tại.
-- [Kiểm thử thanh toán giả lập](PAYMENT_TEST.md): thực hành local với webhook giả; không dùng cấu hình bỏ kiểm tra chữ ký trên môi trường public.
-
-## Tài liệu RAG giữ nguyên vị trí
-
-- [Hướng dẫn đánh giá RAG](../docs/RAG_EVALUATION.md).
-- [Kết quả đánh giá RAG](../docs/RAG_EVALUATION_RESULT.md).
-
-Các tài liệu RAG vẫn nằm trong `docs/`; dữ liệu knowledge và evaluation của chatbot không được chuyển vào thư mục này.
-
-## Lưu trữ
-
-- [Ghi chú công việc cũ](archive/TODO_LEGACY.md): giữ lại để tham khảo, không phản ánh chính xác trạng thái hiện tại.
+Các tài liệu đánh giá vẫn ở `docs/`; dữ liệu chatbot giữ nguyên tại `backend/ai_agent/data/`. Đây là thư mục hướng dẫn người dùng dự án, không phải nguồn kiến thức để nạp vào RAG.

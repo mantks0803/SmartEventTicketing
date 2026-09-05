@@ -14,11 +14,11 @@ from events.models import Event, TicketType, EventCategoryEnum, EventStatusEnum
 from seating.models import Seat, SeatStatusEnum
 
 def run_seed():
-    print("🧹 Đang tiến hành dọn dẹp dữ liệu cũ...")
+    print("Đang tiến hành dọn dẹp dữ liệu cũ...")
     deleted_events_count, _ = Event.objects.all().delete()
-    print(f"🗑️ Đã xóa thành công {deleted_events_count} sự kiện cũ (bao gồm toàn bộ loại vé và ghế liên quan).")
+    print(f"Đã xóa thành công {deleted_events_count} bản ghi cũ (bao gồm sự kiện và dữ liệu liên quan).")
 
-    print("\n🚀 Bắt đầu quá trình nạp dữ liệu mẫu mới...")
+    print("\nBắt đầu quá trình nạp dữ liệu mẫu mới...")
 
     user, created = User.objects.get_or_create(
         username='demo_organizer',
@@ -177,7 +177,7 @@ def run_seed():
         created_count += 1
         print(f"  + [{created_count:02d}/32] Đã tạo thành công: {title} ({venue})")
 
-    print(f"\n✅ TỔNG KẾT: Đã xóa {deleted_events_count} sự kiện cũ và khởi tạo mới thành công {created_count} sự kiện đa dạng!")
+    print(f"\nTổng kết: Đã xóa {deleted_events_count} bản ghi cũ và tạo mới {created_count} sự kiện.")
 
 if __name__ == '__main__':
     run_seed()

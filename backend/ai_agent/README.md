@@ -1,106 +1,69 @@
-# AI Agent: chatbot và dữ liệu RAG
+# Chatbot và dữ liệu RAG
 
-Chatbot dành cho Customer/Organizer đã đăng nhập và có tài khoản hoạt động. Admin, staff và superuser không được dùng các API chatbot. Frontend nằm tại `frontend/src/components/chat/ChatWidget.vue`; backend cung cấp `POST /api/ai/chat/`, danh sách phiên tại `GET /api/ai/sessions/` và tin nhắn tại `GET /api/ai/sessions/<id>/messages/`. Mỗi người chỉ truy cập được phiên chat của mình.
+Dành cho Customer/Organizer đã đăng nhập, còn hoạt động; Admin, staff và superuser bị chặn. API chính: `POST /api/ai/chat/`.
 
-## Ba chế độ hiện có
+## Chức năng
 
-| Chế độ | Nguồn dữ liệu và cách dùng | Cần Google API? |
-|---|---|---|
-| `GENERAL` — Hỏi hệ thống | Tìm tài liệu phù hợp theo vai trò, rồi tạo câu trả lời về quy trình/chính sách có trong tài liệu. Không tra trạng thái đơn hàng hay ghế cụ thể. | Có: embedding và chat |
-| `RECOMMEND_EVENT` — Tìm sự kiện | Form lọc truy vấn PostgreSQL trực tiếp; hoặc nhập tên sự kiện để kiểm tra ghế. Tối đa 5 sự kiện đã xuất bản, chưa diễn ra và phù hợp điều kiện. | Không |
-| `PLAN_EVENT` — Tư vấn tổ chức | Form cung cấp tham số; Python tính dự toán từ `EventService` và giá vé tham khảo trong database. RAG/Gemini diễn giải số liệu đó. | Có cho phần diễn giải; phép tính dùng database/Python |
+| Chế độ | Cách hoạt động |
+|---|---|
+| `GENERAL` — Hỏi đáp | Tìm tài liệu theo vai trò bằng embedding/pgvector, gọi Gemini trả lời |
+| `RECOMMEND_EVENT` — Sự kiện | Tìm tối đa 5 sự kiện sắp diễn ra hoặc kiểm tra ghế từ database; không gọi Google |
+| `PLAN_EVENT` — Tổ chức | Python tính chi phí/giá vé từ database, kết hợp RAG/Gemini để diễn giải |
 
-Đây không phải chatbot tự suy ra mọi bộ lọc từ câu gõ tự do. Ở chế độ tìm sự kiện, hãy điền danh mục, địa điểm, giá tối đa hoặc tên sự kiện vào **form**. API có thêm `date_from`/`date_to`, nhưng form hiện tại chưa có hai ô ngày. Ở chế độ tư vấn, thay thông tin trong **form tổ chức** để thay dự toán; câu nhắn không tự ghi đè số khách, chất lượng hoặc dịch vụ đã chọn.
+**Điều kiện tìm kiếm/tổ chức phải nhập trên form**, không tự suy ra đầy đủ từ câu chat. Giá dịch vụ là dữ liệu demo; giá vé tham khảo lấy từ hệ thống, không phải khảo sát thị trường. Kiểm tra ghế không giữ ghế hoặc đặt vé.
 
-Form tổ chức bắt buộc: loại sự kiện, số khách nguyên dương, chất lượng, địa điểm và ít nhất một loại dịch vụ. Thời lượng là tùy chọn nhưng phải dương nếu nhập; dịch vụ tính theo giờ cần thời lượng nhập vào hoặc thời lượng mặc định của dịch vụ. Nếu không có dịch vụ phù hợp địa điểm/chất lượng/sức chứa, hệ thống báo thiếu dữ liệu, không tạo báo giá tùy ý. Số liệu là tham khảo cho demo, không phải báo giá hoặc cam kết đặt dịch vụ.
+Mỗi tin tối đa 1.000 ký tự; dùng 8 tin gần nhất làm ngữ cảnh. Widget giữ phiên hiện tại, chưa tải lại lịch sử cũ khi refresh. API lịch sử `GET /api/ai/sessions/` và `GET /api/ai/sessions/<id>/messages/` chỉ cho xem phiên của chính người dùng.
 
-Tin nhắn tối đa 1.000 ký tự. Backend đưa tối đa 8 tin nhắn gần nhất vào ngữ cảnh và ghép câu người dùng trước đó với câu hiện tại để tìm tài liệu. Tìm sự kiện/kiểm tra ghế không đặt vé, giữ ghế hay thanh toán; số ghế còn là trạng thái tại thời điểm truy vấn.
+## Chuẩn bị lần đầu
 
-## Các file dữ liệu phải giữ nguyên vị trí
+Hoàn tất [SETUP](../../documents/SETUP.md): PostgreSQL/pgvector, thư viện và migration. Điền `GOOGLE_API_KEY` riêng vào `backend/.env`; giữ các biến model từ [mẫu cấu hình](../.env.example).
 
-```text
-backend/ai_agent/
-├── README.md                    # Hướng dẫn vận hành, không phải tài liệu RAG
-├── data/
-│   ├── event_services.json      # Danh mục dịch vụ mẫu để dự toán
-│   ├── knowledge/
-│   │   ├── customer/            # Markdown kiến thức dành cho khách hàng
-│   │   └── organizer/           # Markdown kiến thức dành cho ban tổ chức
-│   └── evaluation/
-│       └── rag_questions.json   # Bộ câu hỏi đánh giá
-├── management/commands/        # Seed, rebuild, evaluation
-└── rag_engine/                  # Retrieval, trả lời và phép tính nghiệp vụ
-```
+Model phải được tài khoản Google hỗ trợ, còn quota; số chiều embedding giữ **768**. Khởi động lại backend sau khi đổi cấu hình. Không commit key.
 
-Code đọc các thư mục trên tương đối từ `settings.BASE_DIR` (`backend/`). Không chuyển `data/` sang `database/`. Bộ nạp duyệt mọi file `*.md` bên dưới `knowledge/customer/` và `knowledge/organizer/`; vì vậy không đặt README cài đặt, thông tin bí mật hoặc hướng dẫn phát triển trong hai thư mục đó. README này cố ý nằm ngoài vùng nạp kiến thức.
-
-## Chuẩn bị và nạp dữ liệu
-
-Hoàn tất PostgreSQL + pgvector, Python 3.12, requirements và migration trong [README gốc](../../README.md). Trong `backend/.env`, cấu hình các biến đã có tại [`.env.example`](../.env.example):
-
-```dotenv
-GOOGLE_API_KEY=your-google-api-key
-AI_CHAT_MODEL=gemini-3.6-flash
-AI_EMBEDDING_MODEL=gemini-embedding-2
-AI_EMBEDDING_DIMENSIONS=768
-AI_MAX_CONTEXT_CHUNKS=4
-```
-
-Các tên model trên là cấu hình mặc định của repository, không đảm bảo tài khoản Google của bạn có quyền truy cập hoặc còn quota. Đặt API key thật chỉ trong file local, không commit. Khởi động lại backend sau khi đổi cấu hình. Kích thước embedding bắt buộc là `768` để khớp cột vector hiện tại; không đổi riêng biến môi trường sang số chiều khác.
-
-Từ Windows CMD:
+Trong CMD tại `backend/`, đã kích hoạt môi trường và chọn đúng database:
 
 ```cmd
-cd /d "%USERPROFILE%\SmartEventTicketing"
-call venv\Scripts\activate.bat
-cd backend
-chcp 65001
 set PYTHONUTF8=1
 python manage.py seed_ai_data
 python manage.py rebuild_rag_index
 ```
 
-Hai lệnh có mục đích khác nhau:
+| Lệnh | Tác dụng | Khi chạy lại |
+|---|---|---|
+| `seed_ai_data` | Tạo/cập nhật `EventService` từ JSON theo mã dịch vụ, không gọi Google | Khi đổi JSON hoặc dùng database mới; ghi đè dữ liệu các mã tương ứng |
+| `rebuild_rag_index` | Chia Markdown, tạo embedding và thay dữ liệu tra cứu trong database; dùng quota Google | Khi đổi tài liệu/model embedding hoặc dùng database mới |
 
-- `seed_ai_data` đọc `data/event_services.json`, tạo hoặc cập nhật `EventService` theo `code`. Không gọi Google và không seed sự kiện bán vé. Chạy lại sẽ cập nhật các mã có trong JSON bằng dữ liệu mẫu.
-- `rebuild_rag_index` đọc Markdown, chia đoạn, gọi Google Embedding rồi lưu `KnowledgeBase`/`KnowledgeChunk` vào database đang chọn. Nó thay thế chunk của tài liệu đã xử lý và xóa tài liệu cũ thuộc nguồn `customer/`/`organizer/` không còn trên đĩa. Đây là thao tác ghi dữ liệu và dùng quota, không phải bước chạy mỗi lần khởi động server.
+Rebuild cũng xóa tài liệu thuộc nguồn customer/organizer không còn trên đĩa. **Không chạy hai lệnh mỗi lần mở server.** Tìm sự kiện cần Event có sẵn; xem [dữ liệu mẫu](../../database/README.md) và cảnh báo trước khi seed.
 
-Cần rebuild sau khi sửa tài liệu hoặc thay model embedding để truy vấn và chỉ mục dùng cùng model. Việc chỉ thêm câu hỏi evaluation không yêu cầu rebuild. Dữ liệu dịch vụ/chỉ mục nằm riêng trong mỗi database: nếu chuyển sang database mới thì cần chuẩn bị lại ở database đó. Để có sự kiện cho chế độ tìm kiếm, dùng dữ liệu đã tạo trên ứng dụng hoặc xem [hướng dẫn seed sự kiện](../../database/README.md) và đọc cảnh báo xóa dữ liệu trước.
+## File cần biết
 
-## Đánh giá và kiểm thử
+| Trong `backend/ai_agent/` | Vai trò |
+|---|---|
+| `data/knowledge/customer/`, `data/knowledge/organizer/` | Tài liệu Markdown dùng để trả lời |
+| `data/event_services.json` | Giá dịch vụ mẫu để nạp database |
+| `rag_engine/` | Nạp/tìm vector, trả lời RAG và tính toán |
+| `models.py`, `serializers.py`, `views.py`, `urls.py` | Database, kiểm tra đầu vào, xử lý API |
+| `management/commands/` | Các lệnh nạp và đánh giá |
+| `data/evaluation/rag_questions.json` | Câu hỏi đánh giá, không dùng làm tài liệu trả lời |
 
-Từ thư mục `backend`, với môi trường ảo đã kích hoạt:
+Giữ nguyên đường dẫn dữ liệu. Bộ nạp đọc mọi `*.md` trong hai thư mục knowledge trên; không đặt README cài đặt hoặc bí mật vào đó.
 
-```cmd
-python manage.py evaluate_rag
-python manage.py evaluate_rag --with-generation --generation-limit 5
-```
+## Kiểm tra và lỗi thường gặp
 
-Lệnh đầu đánh giá retrieval trên 30 câu hỏi hiện có: không gọi Gemini Chat nhưng vẫn gọi embedding cho các câu hỏi và tiêu tốn quota embedding. Lệnh thứ hai chạy lại retrieval và thêm generation cho tối đa 5 case được đánh dấu. Không cần chạy cả hai liên tiếp nếu chỉ muốn một lần đánh giá có generation. Lỗi quota/rate limit không đồng nghĩa code hoặc migration bị hỏng; ngừng gọi lặp lại, kiểm tra cấu hình và đợi quota phù hợp.
+Test không gọi Google thật, chạy tại `backend/`: `python manage.py test ai_agent -v 2 --keepdb`. Vẫn cần PostgreSQL/pgvector và quyền tạo database test.
 
-Có thể lưu kết quả vào một file riêng để không ghi đè báo cáo đã commit:
+Đánh giá tìm tài liệu trên 30 câu hỏi:
 
 ```cmd
 python manage.py evaluate_rag --report ..\docs\RAG_EVALUATION_LOCAL.md
 ```
 
-Đọc kết quả trước khi chia sẻ hoặc commit. Xem [hướng dẫn đánh giá RAG](../../docs/RAG_EVALUATION.md) để hiểu Hit@K, nguồn đúng, từ chối câu ngoài phạm vi và giới hạn phép đo. Evaluation độc lập không kiểm tra toàn bộ form, memory hội thoại, tìm sự kiện hay dự toán; nó cũng không tự làm CI thất bại chỉ vì tỷ lệ chất lượng thấp.
+Lệnh dùng quota embedding, chưa gọi chat. Thêm `--with-generation --generation-limit 5` nếu cần đánh giá cả câu trả lời. Xem [hướng dẫn evaluation](../../docs/RAG_EVALUATION.md); không chạy đánh giá thật trong CI hoặc ghi đè báo cáo muốn giữ.
 
-Kiểm thử AI dùng mock cho các lời gọi Google:
+- Không thấy widget: kiểm tra vai trò/trạng thái tài khoản.
+- Thiếu thông tin: kiểm tra đúng database, tài liệu theo vai trò và đã rebuild chưa.
+- AI lỗi/chậm: kiểm tra key, model, quota và log; không gửi liên tục khi hết quota. Tìm sự kiện vẫn không cần Google; dự toán có thể trả số liệu khi diễn giải lỗi.
+- Thiếu sự kiện/dịch vụ: kiểm tra dữ liệu và điều kiện form; hệ thống không tự tìm dịch vụ trên Internet.
+- Lỗi vector: kiểm tra pgvector phía PostgreSQL, migration và số chiều 768.
 
-```cmd
-python manage.py test ai_agent -v 2
-```
-
-Các test vẫn cần PostgreSQL/pgvector và quyền tạo database test. Không dùng database sản xuất cho cấu hình phát triển/kiểm thử. Không đưa các lệnh rebuild hoặc evaluation gọi Google thật vào CI.
-
-## Khi chatbot không trả lời như mong đợi
-
-- Không thấy widget: đăng nhập bằng Customer/Organizer hoạt động; Admin không có chatbot.
-- `GENERAL` nói chưa đủ thông tin: kiểm tra tài liệu đúng vai trò và chỉ mục đã tạo. Chỉ các đoạn có cosine distance không lớn hơn `0.40` được dùng; hệ thống không có dữ liệu web mở để trả lời mọi chủ đề.
-- AI tạm gián đoạn: kiểm tra key, quyền truy cập model, quota và log backend. `RECOMMEND_EVENT` không cần Google; ở `PLAN_EVENT`, số liệu dự toán có thể vẫn được trả về dù phần diễn giải AI lỗi.
-- Không tìm thấy sự kiện: kiểm tra form lọc, trạng thái xuất bản, thời gian diễn ra và ghế còn. Sự kiện seed báo cáo là sự kiện đã diễn ra nên không được tìm ở chế độ này.
-- Dự toán báo thiếu dịch vụ: kiểm tra đã chạy `seed_ai_data` ở đúng database và bộ lọc form khớp dữ liệu mẫu.
-- Lỗi vector/embedding: xác nhận pgvector ở server, migration hoàn tất và số chiều vẫn là `768`.
-
-Nội dung tài liệu, câu hỏi, phần lịch sử gần nhất và dữ liệu cấu trúc dùng để tạo câu trả lời có thể được gửi tới Google. Không đưa bí mật hoặc dữ liệu khách hàng thật vào bộ demo; tài liệu nguồn và output model không phải chỉ dẫn để thay đổi quyền truy cập hay thực thi hành động.
+Tài liệu, câu hỏi, lịch sử gần nhất và số liệu tư vấn có thể gửi tới Google. Không đưa bí mật hoặc dữ liệu khách hàng thật vào demo.
