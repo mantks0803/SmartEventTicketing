@@ -20,7 +20,7 @@ Mỗi đơn tối đa **5 ghế**, giữ **10 phút**. Vé chỉ phát hành khi
 ## Cài và chạy
 
 - **Chỉ muốn trải nghiệm:** mở website phía trên, không cần cài đặt.
-- **Cài trên máy lần đầu:** làm theo [hướng dẫn cài đặt từng bước](documents/SETUP.md), từ clone GitHub đến mở website. Hướng dẫn dùng Windows CMD, không cần bản sao database của chủ dự án.
+- **Cài trên máy lần đầu:** làm theo [hướng dẫn cài đặt từng bước](documents/SETUP.md), dùng Windows CMD và PostgreSQL quản lý bằng pgAdmin. Nếu đã cài PostgreSQL/pgAdmin thì dùng lại, không cần cài Docker. Docker là [lựa chọn riêng](documents/SETUP.md#dùng-docker-thay-cho-postgresql-cài-trực-tiếp); không cần bản sao database của chủ dự án.
 - **Đã cài xong:** bật PostgreSQL. Nếu dùng Docker theo hướng dẫn, mở Docker Desktop rồi chạy `docker start smartticket-postgres`. Mở hai cửa sổ CMD:
 
 Backend:
