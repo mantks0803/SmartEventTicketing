@@ -13,13 +13,15 @@ Hai script độc lập. Seed báo cáo không thêm vé vào 32 sự kiện cơ
 
 ## 2. Chuẩn bị database demo riêng
 
-Nếu dùng Docker theo SETUP và database **chưa tồn tại**:
+**Đã dùng PostgreSQL/pgAdmin:** kết nối đúng server → chuột phải **Databases → Create → Database** → nhập `smart_booking_report_demo`, Owner là tài khoản PostgreSQL đang dùng (thường `postgres`) → **Save**. Nếu đã tồn tại, kiểm tra dữ liệu, không xóa để làm lại. Kiểm tra/bật pgvector trên database demo bằng Query Tool như [bước 3 của SETUP](../documents/SETUP.md#3-tạo-database-bằng-pgadmin), thay tên database cần chọn thành `smart_booking_report_demo`.
+
+**Chỉ nếu bạn chọn Docker theo SETUP**, tạo database demo chưa tồn tại bằng CMD:
 
 ```cmd
 docker exec smartticket-postgres psql -U postgres -d postgres -c "CREATE DATABASE smart_booking_report_demo;"
 ```
 
-Nếu dùng PostgreSQL cài trực tiếp, tạo database cùng tên bằng pgAdmin; server cần pgvector. Database đã tồn tại thì kiểm tra dữ liệu, không xóa để làm lại.
+Không chạy cả hai cách. Database Docker độc lập với PostgreSQL cài trực tiếp, dù có cùng tên; nếu đã tồn tại, không chạy lại lệnh tạo.
 
 Dừng backend, sửa `backend/.env`:
 
@@ -27,7 +29,7 @@ Dừng backend, sửa `backend/.env`:
 DB_NAME=smart_booking_report_demo
 ```
 
-Giữ user/password/host/port nếu cùng server. Docker theo SETUP dùng cổng **5433**, PostgreSQL trực tiếp thường là **5432**. Đổi tên database không sao chép dữ liệu.
+Giữ user/password/host/port nếu cùng server. PostgreSQL trực tiếp thường dùng cổng **5432** và mật khẩu của bạn; Docker theo SETUP dùng cổng **5433**. Đổi tên database không sao chép dữ liệu.
 
 Mở CMD, thay đường dẫn nếu cần, rồi kiểm tra database trước khi nạp:
 
