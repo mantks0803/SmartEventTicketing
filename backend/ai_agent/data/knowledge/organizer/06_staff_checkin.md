@@ -3,11 +3,11 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Quy trình SmartEventTicketing và hướng dẫn nội bộ phục vụ đồ án  
-> Cập nhật: 19/08/2026
+> Cập nhật: 05/09/2026
 
 ## Mục đích
 
-Tài liệu này hướng dẫn xác định vai trò nhân sự, phân công trách nhiệm và tổ chức check-in bằng QR. Số lượng nhân sự cuối cùng phụ thuộc địa điểm, quy mô và yêu cầu an toàn thực tế.
+Tài liệu này hướng dẫn phân công nhân sự và soát vé bằng mã vé trên SmartEventTicketing. Giao diện hiện hỗ trợ nhập mã thủ công, chưa có chức năng mở camera quét QR. Số lượng nhân sự phụ thuộc địa điểm, quy mô và yêu cầu an toàn thực tế.
 
 ## Các nhóm nhân sự thường gặp
 
@@ -21,7 +21,7 @@ Theo dõi timeline, phối hợp MC, diễn giả, nghệ sĩ, kỹ thuật và 
 
 ### Nhân sự check-in
 
-Hướng dẫn khách mở QR, quét vé, kiểm tra thông báo và chuyển trường hợp bất thường cho người phụ trách.
+Hướng dẫn khách mở vé, chuẩn bị mã, kiểm tra thông báo và chuyển trường hợp bất thường cho người phụ trách. Việc phân công nhân sự ngoài thực tế không tự cấp cho họ quyền truy cập phần mềm; hệ thống chưa có tài khoản nhân viên soát vé riêng.
 
 ### Nhân sự hỗ trợ khách
 
@@ -46,13 +46,11 @@ Ban tổ chức cần dựa trên:
 - Số khách dự kiến.
 - Khoảng thời gian khách tập trung đến.
 - Số cổng vào.
-- Tốc độ quét QR thực tế.
+- Tốc độ nhập hoặc đọc mã vé thực tế.
 - Số khu vực cần giám sát.
 - Mức độ phức tạp của chương trình.
 
-Để mô phỏng, có thể giả định một quầy xử lý khoảng 60–100 khách mỗi giờ trong điều kiện QR đã được chuẩn bị sẵn. Đây chỉ là giả định lập kế hoạch; Ban tổ chức phải chạy thử tại địa điểm trước khi chốt số quầy.
-
-Ví dụ, 400 khách dự kiến đến trong một giờ không nên chỉ bố trí một thiết bị quét. Cần chia luồng, tăng số quầy hoặc mở cửa check-in sớm hơn.
+Ban tổ chức cần đo thử thời gian xử lý một vé, gồm lấy mã, gửi yêu cầu và xem kết quả, rồi mới ước lượng số quầy. Không coi tốc độ xử lý giả định là số liệu đo được của website. Với nhiều khách đến cùng lúc, có thể chia hàng chờ và bố trí người hướng dẫn chuẩn bị mã trước.
 
 ## Chuẩn bị trước sự kiện
 
@@ -61,10 +59,10 @@ Ví dụ, 400 khách dự kiến đến trong một giờ không nên chỉ bố
 3. Cung cấp số điện thoại hoặc kênh liên lạc nội bộ.
 4. Hướng dẫn cách xử lý tình huống thường gặp.
 5. Kiểm tra thiết bị và tài khoản Organizer.
-6. Chạy thử một QR hợp lệ, QR đã dùng và QR không tồn tại trên môi trường thử nghiệm.
+6. Chạy thử mã vé hợp lệ, mã đã dùng và mã không tồn tại trên môi trường thử nghiệm.
 7. Thống nhất người có quyền quyết định khi phát sinh tranh chấp.
 
-Không dùng QR vé thật của khách hàng để thử công khai trước sự kiện.
+Không dùng vé thật của khách để thử, vì check-in thành công sẽ đánh dấu vé đã sử dụng. Chỉ dùng vé thử trong môi trường demo.
 
 ## Quyền check-in trên SmartEventTicketing
 
@@ -72,37 +70,43 @@ Chỉ tài khoản Organizer sở hữu sự kiện mới được phép soát v
 
 Backend kiểm tra:
 
-- QR tồn tại.
+- Mã vé tồn tại, khớp với `Ticket.qr_code`.
 - Order của Ticket đang `PAID`.
 - Ticket thuộc sự kiện của Organizer đang đăng nhập.
 - Ticket chưa được check-in.
 
 Việc kiểm tra và cập nhật được thực hiện trong transaction để hạn chế hai thiết bị cùng xác nhận một vé.
 
-## Quy trình check-in đề xuất
+## Các bước soát vé trên website
 
-1. Hướng dẫn khách mở “Vé của tôi”.
-2. Chọn đúng sự kiện và đúng vé.
-3. Nhân sự yêu cầu khách mở đúng vé, sau đó quét QR bằng tài khoản Organizer phù hợp.
-4. Chỉ cho khách vào khi hệ thống báo thành công.
-5. Nếu vé đã sử dụng hoặc không hợp lệ, chuyển sang quầy hỗ trợ.
-6. Không tự sửa trạng thái vé hoặc cho qua chỉ dựa trên ảnh chuyển khoản.
+1. Đăng nhập bằng tài khoản Organizer sở hữu sự kiện, vào trang **Quản lý**.
+2. Chọn tab **Soát vé**.
+3. Yêu cầu khách mở email chứa vé hoặc vào **Vé của tôi**, chọn **Xem mã QR** để lấy chuỗi mã vé.
+4. Nhập hoặc dán đầy đủ chuỗi mã vào ô soát vé. Không nhập mã đơn, tên ghế hoặc mã giao dịch PayOS thay cho mã vé.
+5. Bấm **Soát vé ngay** hoặc nhấn Enter và chờ kết quả. Thiết bị quét ngoài chỉ dùng được nếu nó đưa chuỗi mã vào ô nhập; không cần thiết bị này để dùng chức năng.
+6. Nếu thành công, hệ thống đánh dấu vé đã check-in và lưu thời gian. Nếu báo lỗi, kiểm tra nguyên nhân trước khi cho khách vào.
+
+Khách không tự check-in bằng chatbot. BTC cũng không được bỏ qua kiểm tra bằng cách tự sửa dữ liệu hoặc chấp nhận ảnh chuyển khoản thay vé.
 
 Mỗi ghế có một Ticket và một QR riêng. Nếu một đơn mua nhiều ghế, từng vé phải được kiểm tra riêng.
 
 ## Xử lý tình huống tại quầy
 
-### QR khó quét
+### Không thấy ảnh QR hoặc không có máy quét
 
-Tăng độ sáng màn hình, lau camera, giữ khoảng cách phù hợp và thử mở lại QR từ “Vé của tôi”. Có thể kiểm tra chuỗi QR theo quy trình nội bộ nếu thiết bị hỗ trợ.
+Dùng chuỗi mã vé trong email hoặc bên dưới QR trên website để nhập thủ công. Không cần tìm nút mở camera trong giao diện hiện tại.
 
-### QR không tồn tại
+### Mã vé không tồn tại
 
-Kiểm tra khách có đăng nhập đúng tài khoản và mở đúng vé không. Không tự tạo QR thay thế.
+Kiểm tra chuỗi có đủ ký tự, đúng vé và không bị nhầm với mã đơn. Khách cần mở vé bằng đúng tài khoản đã mua hoặc email chứa vé. Không tự tạo mã thay thế.
 
 ### Vé đã check-in
 
-Không quét lại. Chuyển trường hợp cho người phụ trách cùng mã đơn và thông tin vé để kiểm tra thời gian check-in đã lưu.
+Không xác nhận lần hai. Chuyển trường hợp cho người phụ trách cùng mã đơn và thông tin vé để kiểm tra thời gian check-in đã lưu.
+
+### Không có quyền soát vé
+
+Kiểm tra tài khoản đang đăng nhập có phải Organizer của chính sự kiện không. Không chuyển sang tài khoản BTC bất kỳ hoặc chia sẻ mật khẩu để vượt giới hạn quyền.
 
 ### Khách có bằng chứng chuyển tiền nhưng chưa có vé
 
@@ -110,7 +114,7 @@ Không xác nhận vào cửa chỉ dựa trên ảnh. Kiểm tra trạng thái 
 
 ### Mất kết nối
 
-Thử mạng dự phòng và giữ hàng chờ có trật tự. Không ghi nhận check-in thủ công vào database nếu chưa có quy trình đồng bộ rõ ràng.
+Thử mạng dự phòng và giữ hàng chờ có trật tự. Nhập mã thủ công vẫn cần kết nối server, không phải chế độ check-in ngoại tuyến. Nếu mất mạng ngay sau khi gửi, hệ thống có thể đã ghi nhận; kiểm tra kết quả trước khi gửi lại và xử lý thông báo vé đã dùng qua người phụ trách.
 
 ## Sau sự kiện
 
@@ -127,7 +131,7 @@ Dữ liệu này hỗ trợ cải thiện số quầy và thời gian mở cửa
 ## An toàn thông tin
 
 - Không chụp hoặc phát tán QR của khách.
-- Không chia sẻ tài khoản Organizer cho người không được phân công.
+- Không chia sẻ mật khẩu tài khoản Organizer; người hỗ trợ chuẩn bị mã không tự có quyền soát vé trong hệ thống.
 - Không yêu cầu mật khẩu hoặc OTP ngân hàng.
 - Khóa thiết bị check-in khi không sử dụng.
 - Chỉ truy cập dữ liệu cần thiết cho sự kiện mình quản lý.

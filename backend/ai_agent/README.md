@@ -35,6 +35,14 @@ python manage.py rebuild_rag_index
 
 Rebuild cũng xóa tài liệu thuộc nguồn customer/organizer không còn trên đĩa. **Không chạy hai lệnh mỗi lần mở server.** Tìm sự kiện cần Event có sẵn; xem [dữ liệu mẫu](../../database/README.md) và cảnh báo trước khi seed.
 
+### Rebuild khi Google giới hạn 429
+
+Lệnh kiểm tra kết nối và in database đích trước khi gọi Google. Mỗi lần gửi một đoạn, nghỉ 2 giây giữa các đoạn. Nếu gặp 429, lệnh chờ thời gian Google yêu cầu cộng 2 giây an toàn (mặc định 60 giây nếu không có thời gian), rồi thử lại đúng đoạn lỗi tối đa 3 lần. Không tự đổi model và không bỏ qua đoạn lỗi. Lỗi hạn mức ngày hoặc giới hạn bằng 0 được trả về ngay khi nhận diện được.
+
+Các embedding đã tạo được giữ trong bộ nhớ trong lúc lệnh còn chạy. Database chỉ cập nhật khi đã tạo đủ; nếu lỗi trước đó thì bộ kiến thức cũ vẫn còn. Đóng CMD hoặc chạy lại lệnh sẽ bắt đầu lại từ đầu, chưa có chức năng tiếp tục sau khi thoát. Không chạy rebuild local và Neon đồng thời nếu dùng chung hạn mức Google.
+
+Chỉ đổi Markdown thì không chạy `seed_ai_data` hoặc `migrate`. Rebuild cho từng database cần cập nhật; biến `DB_*` đặt bằng `set` trong CMD ưu tiên hơn `backend/.env`. Trước khi chạy trên Neon, đối chiếu cả host, branch và database với backend Vercel, không đoán tên database. Giữ model embedding giống backend đọc dữ liệu và số chiều 768. Kết thúc công việc Neon thì đóng CMD riêng để tránh dùng nhầm kết nối khi quay về local.
+
 ## File cần biết
 
 | Trong `backend/ai_agent/` | Vai trò |
@@ -51,6 +59,12 @@ Giữ nguyên đường dẫn dữ liệu. Bộ nạp đọc mọi `*.md` trong 
 ## Kiểm tra và lỗi thường gặp
 
 Test không gọi Google thật, chạy tại `backend/`: `python manage.py test ai_agent -v 2 --keepdb`. Vẫn cần PostgreSQL/pgvector và quyền tạo database test.
+
+Chỉ kiểm tra giãn tốc độ và thử lại khi gặp 429, không cần kết nối database hoặc gọi Google:
+
+```cmd
+python manage.py test ai_agent.tests.test_rag_indexer.EmbeddingRetryTests -v 2
+```
 
 Đánh giá tìm tài liệu trên 30 câu hỏi:
 

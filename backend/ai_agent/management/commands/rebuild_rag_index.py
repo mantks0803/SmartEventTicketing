@@ -1,6 +1,7 @@
 import sys
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 
 from ai_agent.rag_engine.rag_indexer import rebuild_rag_index
 
@@ -16,9 +17,20 @@ class Command(BaseCommand):
         if hasattr(sys.stderr, 'reconfigure'):
             sys.stderr.reconfigure(encoding='utf-8')
 
-        self.stdout.write('Bắt đầu đọc tài liệu và tạo embedding...')
-
         try:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT current_database()')
+                database_name = cursor.fetchone()[0]
+
+            self.stdout.write(
+                f'Database đích: {database_name} '
+                f'| Host: {connection.settings_dict["HOST"]}'
+            )
+            self.stdout.write(
+                'Bắt đầu tạo embedding từng đoạn, nghỉ 2 giây giữa các đoạn. '
+                'Nếu gặp 429, lệnh sẽ tự chờ và thử lại tối đa 3 lần.'
+            )
+
             result = rebuild_rag_index(
                 progress_callback=self.stdout.write,
             )

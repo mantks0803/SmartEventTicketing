@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: POLICY  
 > Nguồn: Luồng thanh toán PayOS của SmartEventTicketing  
-> Cập nhật: 19/08/2026
+> Cập nhật: 05/09/2026
 
 ## Mục đích
 
@@ -58,9 +58,11 @@ Sau khi xác nhận hợp lệ, hệ thống thực hiện trong một transacti
 - Lưu mã giao dịch PayOS nếu được cung cấp.
 - Phát hành một Ticket cho mỗi ghế trong đơn.
 - Tạo mã QR riêng cho từng Ticket.
-- Gửi email thông báo thanh toán thành công sau khi dữ liệu được lưu an toàn.
+- Sau khi dữ liệu được lưu an toàn, hệ thống thực hiện gửi email thanh toán thành công, kèm thông tin từng vé, ảnh QR và mã vé dùng để check-in thủ công.
 
 Email chỉ là kênh thông báo. Trạng thái đơn và vé trong hệ thống mới là căn cứ chính. Việc email đến chậm hoặc bị chuyển vào thư mục spam không làm mất vé đã phát hành.
+
+Để xem vé, chọn nút xem vé trên trang kết quả hoặc mở **Vé của tôi** bằng đúng tài khoản đã đặt. Một đơn mua nhiều ghế sẽ có nhiều vé, mỗi vé có mã riêng. Email chứa vé giúp khách chuẩn bị mã trước khi đến sự kiện; không cần đăng nhập chỉ để đọc mã đã có trong email.
 
 ## Chống xử lý giao dịch lặp
 
@@ -87,11 +89,22 @@ Khách hàng nên:
 
 Khi liên hệ, cần cung cấp mã đơn, email tài khoản, thời gian thanh toán, số tiền và mã tham chiếu giao dịch nếu có. Không gửi mật khẩu hoặc mã QR vé.
 
+## Không nhận được email sau thanh toán
+
+1. Mở **Vé của tôi** và chọn **Làm mới** để kiểm tra vé đã phát hành.
+2. Kiểm tra hộp thư của email gắn với tài khoản đã mua vé, bao gồm thư rác hoặc spam.
+3. Nếu đã có vé trên website, dùng mã vé tại đó; không thanh toán lại để yêu cầu một email khác.
+4. Nếu cả email lẫn website đều chưa có vé, giữ mã đơn và yêu cầu hỗ trợ kiểm tra trạng thái giao dịch.
+
+Chatbot không có chức năng tự gửi lại email, truy cập giao dịch cá nhân hoặc tự chuyển đơn thành đã thanh toán. Không cung cấp mật khẩu, OTP ngân hàng hoặc mã vé đầy đủ trong cuộc trò chuyện.
+
 ## Thanh toán đến sau khi đơn hết hạn
 
 Trong một số trường hợp hiếm, PayOS có thể xác nhận giao dịch sau thời điểm giữ ghế kết thúc. Backend chỉ phát hành vé nếu các ghế cũ vẫn còn an toàn, chưa được bán và chưa bị đơn khác giữ.
 
 Nếu ghế đã được cấp cho đơn khác, hệ thống không tự phát hành vé và đánh dấu tình huống cần Admin kiểm tra. Khách hàng không nên thanh toán thêm lần nữa; hãy liên hệ hỗ trợ và cung cấp mã đơn.
+
+Thông báo cần kiểm tra không phải xác nhận hoàn tiền. Project chưa có luồng tự hoàn tiền thật về ngân hàng; không được hứa rằng tiền sẽ tự được hoàn sau một khoảng thời gian cố định.
 
 ## Khi người dùng hủy trên PayOS
 

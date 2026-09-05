@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Phương pháp dự toán nội bộ phục vụ đồ án SmartEventTicketing  
-> Cập nhật: 19/08/2026
+> Cập nhật: 05/09/2026
 
 ## Mục đích
 
@@ -16,7 +16,11 @@ Tài liệu này quy định cách thu thập đầu vào, chia nhóm chi phí, 
 - Số khách dự kiến.
 - Thời lượng tổ chức nếu dịch vụ tính theo giờ.
 - Các nhóm dịch vụ cần dùng.
-- Mức chất lượng: tiết kiệm, tiêu chuẩn hoặc nâng cao.
+- Mức chất lượng: Tiết kiệm (`ECONOMY`), Tiêu chuẩn (`STANDARD`) hoặc Cao cấp (`PREMIUM`).
+
+Trong chatbot, chọn **Tổ chức** rồi điền loại sự kiện, số khách, chất lượng, địa điểm và tích các dịch vụ cần dùng. Có thể nhập thời lượng theo giờ. Các ô này là dữ liệu tính toán; backend chưa tự trích đầy đủ yêu cầu từ câu chat.
+
+Ví dụ, muốn tổ chức âm nhạc 600 người không cần trang trí: chọn Âm nhạc, nhập 600 khách, chọn chất lượng, địa điểm và bỏ chọn Trang trí. Chỉ gõ “không cần trang trí” mà vẫn tích ô Trang trí thì dịch vụ đó vẫn được đưa vào phép tính.
 
 ## Các nhóm chi phí chính
 
@@ -48,6 +52,8 @@ Gồm thiết kế nội dung, quảng cáo, quay phim, chụp ảnh hoặc live
 
 Giá dịch vụ phải đọc từ `EventService`, gồm giá thấp nhất, giá cao nhất, đơn vị tính, khu vực, sức chứa và ngày kiểm chứng.
 
+Dữ liệu dịch vụ mẫu được nạp từ `event_services.json` vào database. Khi tư vấn, hệ thống đọc các bản ghi trong database, không đọc lại JSON mỗi câu hỏi và không đi lấy báo giá trực tiếp trên Internet. Tên nhà cung cấp và giá trong bộ mẫu phục vụ demo, không phải báo giá thương mại đã xác minh.
+
 Các đơn vị có thể gồm:
 
 - `PACKAGE`: tính theo gói.
@@ -56,6 +62,14 @@ Các đơn vị có thể gồm:
 
 Nếu một nhóm dịch vụ không có dữ liệu phù hợp, hệ thống phải báo thiếu dữ liệu thay vì tự bịa giá.
 
+## Cách chọn dịch vụ và xử lý thiếu dữ liệu
+
+Mỗi dịch vụ phải đang hoạt động, đúng mức chất lượng, khớp địa điểm tìm kiếm và có khoảng sức chứa bao gồm số khách đã nhập. Trong từng nhóm được chọn, hệ thống ưu tiên dịch vụ có giá cao nhất của khoảng giá nhỏ nhất, rồi xét giá thấp nhất và mã định danh nếu bằng nhau. Đây không phải mô hình dự đoán giá bằng học máy.
+
+Nếu báo “Không tìm thấy dịch vụ phù hợp cho: VENUE, SOUND_LIGHT”, nghĩa là thiếu Địa điểm hoặc Âm thanh ánh sáng thỏa điều kiện. Hãy kiểm tra địa điểm, chất lượng và quy mô thực tế. Có thể thử mức chất lượng khác nếu chấp nhận thay đổi yêu cầu, hoặc đề nghị người quản lý bổ sung dữ liệu dịch vụ phù hợp.
+
+Ví dụ minh họa: gói Cao cấp nhận từ 300 khách sẽ không phù hợp yêu cầu 100 khách. Không tăng giả số khách chỉ để vượt kiểm tra. Lỗi này xảy ra ở bước chọn dữ liệu để tính, không phải do câu hỏi dài hoặc hết hạn mức Gemini. Thêm tài liệu Markdown không tự tạo thêm dịch vụ trong database.
+
 ## Công thức dự toán
 
 Với mỗi dịch vụ:
@@ -63,6 +77,8 @@ Với mỗi dịch vụ:
 ```text
 Chi phí dịch vụ = đơn giá × số lượng áp dụng
 ```
+
+Số lượng áp dụng là 1 đối với gói, số khách đối với dịch vụ theo người, và số giờ đối với dịch vụ theo giờ. Nếu chưa nhập số giờ, hệ thống dùng thời lượng có sẵn của dịch vụ nếu có; nếu vẫn thiếu thì yêu cầu bổ sung. Gói không tự nhân thêm theo số khách.
 
 Sau đó, bản demo tính:
 
@@ -111,6 +127,8 @@ Backend có thể query `TicketType.price` của các Event:
 - Có dữ liệu vé hợp lệ.
 
 Backend hiện tính trung bình cộng `TicketType.price` của tất cả loại vé phù hợp. Kết quả được trả trong field `market_reference_avg_price`.
+
+Đây là trung bình theo loại vé, không tính trọng số theo số vé đã bán. Phép đối chiếu hiện chưa lọc theo địa điểm, số khách hoặc thời gian bắt đầu. Không gọi kết quả này là giá trung bình của riêng những sự kiện sắp diễn ra tại địa điểm đã nhập.
 
 Dữ liệu seed là dữ liệu demo, vì vậy chatbot phải nói “giá các sự kiện tương tự trên hệ thống”, không gọi đây là giá thị trường thực tế.
 

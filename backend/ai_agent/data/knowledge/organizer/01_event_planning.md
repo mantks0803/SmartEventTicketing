@@ -3,7 +3,7 @@
 > Đối tượng: Organizer  
 > Danh mục kiến thức: PLANNING  
 > Nguồn: Quy trình nghiệp vụ SmartEventTicketing và hướng dẫn nội bộ phục vụ đồ án  
-> Cập nhật: 17/08/2026
+> Cập nhật: 05/09/2026
 
 ## Mục đích
 
@@ -56,16 +56,13 @@ Ngày diễn ra cần có quy trình check-in, xử lý sự cố và liên lạ
 
 ## Tạo sự kiện trên SmartEventTicketing
 
-Ban tổ chức đăng nhập bằng tài khoản Organizer và nhập:
-
-- Tên sự kiện.
-- Ảnh đại diện.
-- Nội dung mô tả.
-- Địa điểm.
-- Thời gian bắt đầu.
-- Danh mục.
-- Một hoặc nhiều loại vé.
-- Giá, số hàng, số ghế mỗi hàng và tiền tố hàng của từng loại vé.
+1. Đăng nhập bằng tài khoản Organizer còn hoạt động. Tài khoản Customer không có quyền tạo sự kiện.
+2. Chọn **Tạo sự kiện** trên thanh điều hướng hoặc trong trang quản lý của Ban tổ chức.
+3. Nhập tên, mô tả, địa điểm, danh mục và thời gian bắt đầu trong tương lai. Kiểm tra cả ngày, tháng, năm và giờ trước khi gửi.
+4. Chọn ảnh đại diện và kiểm tra ảnh xem trước.
+5. Thêm ít nhất một loại vé. Với mỗi loại vé, nhập tên, giá, tiền tố hàng, số hàng và số ghế mỗi hàng.
+6. Kiểm tra tổng số ghế, tổng quan các loại vé và thông tin sự kiện, sau đó bấm **Tạo sự kiện**. Chờ thông báo kết quả, không bấm gửi liên tục.
+7. Khi thành công, mở **Sự kiện của tôi** trong trang quản lý để kiểm tra sự kiện đang chờ Admin duyệt.
 
 Ảnh chấp nhận định dạng JPG, JPEG, PNG hoặc WEBP và có dung lượng tối đa 5 MB. Ảnh được tải lên Cloudinary trước, sau đó URL được lưu vào Event.
 
@@ -90,13 +87,25 @@ Sự kiện Organizer tạo luôn bắt đầu ở trạng thái `PENDING`. Orga
 Luồng xử lý:
 
 1. Organizer gửi sự kiện.
-2. Backend tạo Event, TicketType và Seat ở trạng thái chờ duyệt.
+2. Backend tạo Event ở trạng thái `PENDING`, các loại vé và ghế tương ứng. Trạng thái chờ duyệt thuộc sự kiện, không phải trạng thái của ghế.
 3. Admin xem thông tin sự kiện.
 4. Nếu hợp lệ và chưa qua giờ bắt đầu, Admin chuyển sự kiện sang `PUBLISHED`.
 5. Nếu từ chối, hệ thống hiện chuyển sự kiện sang `CANCELLED`.
 6. Chỉ sự kiện `PUBLISHED` mới xuất hiện công khai và cho phép giữ ghế.
 
 Ban tổ chức nên gửi sự kiện đủ sớm để Admin có thời gian kiểm tra trước ngày mở bán.
+
+## Câu hỏi thường gặp khi tạo sự kiện
+
+**Tạo xong sao chưa thấy sự kiện trên trang chủ?** Sự kiện mới đang chờ duyệt. Kiểm tra trong “Sự kiện của tôi”; không tạo thêm bản trùng chỉ vì chưa thấy trên trang chủ. Việc mua vé còn yêu cầu sự kiện chưa bắt đầu.
+
+**Không tải được ảnh thì làm sao?** Kiểm tra định dạng, dung lượng tối đa 5 MB và kết nối mạng. Nếu vẫn lỗi, ghi lại thông báo và liên hệ hỗ trợ; không gửi khóa Cloudinary hoặc mật khẩu cho chatbot.
+
+**Hai loại vé bị trùng hàng thì sửa gì?** Dùng tiền tố khác nhau, ví dụ VIP và STD. Hai loại vé cùng dùng tiền tố A có thể tạo tên hàng trùng nhau.
+
+**Thời gian hoặc giá vé bị từ chối?** Kiểm tra ngày bắt đầu phải ở tương lai và giá vé tối thiểu 1.000 đồng. Đọc thông báo lỗi cạnh thao tác tạo, sửa dữ liệu rồi gửi lại.
+
+**Chatbot có tạo hoặc duyệt sự kiện giúp tôi không?** Không. Chatbot chỉ hướng dẫn; Organizer tự nhập trên trang tạo sự kiện và Admin thực hiện duyệt.
 
 ## Theo dõi sau khi mở bán
 

@@ -1,4 +1,6 @@
+import math
 import re
+import time
 from pathlib import Path
 
 from django.conf import settings
@@ -26,6 +28,8 @@ KNOWLEDGE_DIRECTORY = (
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 120
+EMBEDDING_REQUEST_INTERVAL = 2
+EMBEDDING_MAX_RETRIES = 3
 
 CATEGORY_PATTERN = re.compile(
     r'^>\s*Danh mục kiến thức:\s*([A-Z_]+)',
@@ -176,6 +180,84 @@ def validate_embedding_vector(vector):
         )
 
 
+def get_embedding_retry_delay(error):
+    api_error = error.__cause__ or error
+    message = f'{error} {api_error}'
+
+    if (
+        getattr(api_error, 'code', None) != 429
+        and 'RESOURCE_EXHAUSTED' not in message.upper()
+    ):
+        return None
+
+    if re.search(r'per\s*day|daily|limit:\s*0\b', message, re.IGNORECASE):
+        return None
+
+    retry_match = re.search(
+        r'retry in\s+(\d+(?:\.\d+)?)s',
+        message,
+        re.IGNORECASE,
+    )
+    if not retry_match:
+        retry_match = re.search(
+            r"retryDelay[\"'\s:]+(\d+(?:\.\d+)?)s",
+            message,
+            re.IGNORECASE,
+        )
+
+    if retry_match:
+        return max(2, math.ceil(float(retry_match.group(1))) + 2)
+
+    return 60
+
+
+def embed_documents_with_retry(model, texts, progress_callback=None):
+    embeddings = []
+
+    for index, text in enumerate(texts, start=1):
+        time.sleep(EMBEDDING_REQUEST_INTERVAL)
+
+        for attempt in range(EMBEDDING_MAX_RETRIES + 1):
+            try:
+                result = model.embed_documents([text])
+            except Exception as exc:
+                wait_seconds = get_embedding_retry_delay(exc)
+                if wait_seconds is None:
+                    raise
+
+                if attempt == EMBEDDING_MAX_RETRIES:
+                    raise RuntimeError(
+                        'Google vẫn giới hạn embedding sau 3 lần thử lại. '
+                        'Hãy kiểm tra hạn mức trong Google AI Studio. '
+                        'Bộ kiến thức cũ trong database chưa bị thay đổi.'
+                    ) from exc
+
+                if progress_callback:
+                    progress_callback(
+                        f'Google báo 429 tại đoạn {index}/{len(texts)}. '
+                        f'Chờ {wait_seconds} giây rồi thử lại '
+                        f'({attempt + 1}/{EMBEDDING_MAX_RETRIES})...'
+                    )
+
+                while wait_seconds > 0:
+                    pause = min(30, wait_seconds)
+                    time.sleep(pause)
+                    wait_seconds -= pause
+                continue
+
+            if len(result) != 1:
+                raise ValueError('Google phải trả đúng một vector cho mỗi đoạn.')
+
+            validate_embedding_vector(result[0])
+            embeddings.append(result[0])
+
+            if progress_callback:
+                progress_callback(f'  Đã tạo embedding đoạn {index}/{len(texts)}.')
+            break
+
+    return embeddings
+
+
 def rebuild_rag_index(
     embedding_model=None,
     knowledge_directory=None,
@@ -210,7 +292,11 @@ def rebuild_rag_index(
             for chunk in chunks
         ]
 
-        embeddings = model.embed_documents(embedding_texts)
+        embeddings = embed_documents_with_retry(
+            model,
+            embedding_texts,
+            progress_callback=progress_callback,
+        )
 
         if len(embeddings) != len(chunks):
             raise ValueError(
