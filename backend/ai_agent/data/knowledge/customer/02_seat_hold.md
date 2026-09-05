@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: POLICY  
 > Nguồn: Quy trình đặt ghế của SmartEventTicketing  
-> Cập nhật: 19/08/2026
+> Cập nhật: 05/09/2026
 
 ## Mục đích
 
@@ -31,13 +31,15 @@ Ghế `LOCKED` hoặc `SOLD` không thể được một đơn mới giữ lại
 
 ## Cách chọn và giữ ghế
 
-1. Mở trang chi tiết của sự kiện.
+1. Tìm sự kiện trên trang danh sách bằng tên hoặc bộ lọc, sau đó mở trang chi tiết. Kiểm tra đúng thời gian và địa điểm trước khi đặt.
 2. Chọn **Mở sơ đồ chọn ghế**.
 3. Chọn ít nhất một ghế `AVAILABLE`.
 4. Kiểm tra số ghế và tổng tiền tạm tính.
 5. Chọn **Giữ ghế ngay**.
 6. Backend kiểm tra lại toàn bộ ghế và tạo đơn nếu dữ liệu hợp lệ.
 7. Khách hàng được chuyển đến trang thanh toán của đơn vừa tạo.
+
+Chọn ghế trên màn hình chưa phải là mua vé thành công. Ghế chỉ được giữ khi hệ thống tạo đơn thành công; vé chỉ được phát hành sau khi xác nhận thanh toán. Tại trang thanh toán, kiểm tra mã đơn, loại vé, tên ghế, số tiền và đồng hồ đếm ngược trước khi mở PayOS.
 
 Giá của từng ghế được lấy từ loại vé gắn với ghế tại thời điểm tạo đơn. Đơn hàng lưu lại giá này để dùng trong quá trình thanh toán.
 
@@ -98,3 +100,7 @@ Vì vậy, việc ghế có màu trống trên màn hình không bảo đảm tu
 - **Sự kiện đã bắt đầu:** không thể tạo đơn mới.
 - **Chọn quá 5 ghế:** giảm số ghế trong đơn.
 - **Đơn đã hết hạn:** quay lại sự kiện và tạo đơn mới.
+
+**Ghế vừa chọn bỗng không đặt được?** Người khác có thể đã giữ ghế trước khi bạn gửi yêu cầu. Tải lại sơ đồ để xem trạng thái mới và chọn ghế khác, không bấm gửi liên tục.
+
+**Rời trang rồi quay lại có được thêm 10 phút không?** Không. Thời gian tính từ lúc tạo đơn, không tính lại từ lúc mở trang. Nếu đã chuyển tiền nhưng đơn hết hạn, xem hướng dẫn thanh toán và liên hệ hỗ trợ, không vội thanh toán đơn khác.

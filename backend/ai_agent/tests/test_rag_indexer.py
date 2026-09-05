@@ -1,7 +1,10 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import Mock, call, patch
 
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
+from google.genai.errors import ClientError
+from langchain_google_genai._common import GoogleGenerativeAIError
 
 from ai_agent.models import (
     EMBEDDING_DIMENSIONS,
@@ -11,6 +14,10 @@ from ai_agent.models import (
 )
 from ai_agent.rag_engine.rag_indexer import (
     CHUNK_SIZE,
+    EMBEDDING_MAX_RETRIES,
+    EMBEDDING_REQUEST_INTERVAL,
+    embed_documents_with_retry,
+    get_embedding_retry_delay,
     load_markdown_documents,
     rebuild_rag_index,
     search_knowledge,
@@ -67,6 +74,10 @@ class InvalidEmbeddingModel:
 )
 class RagIndexerTests(TestCase):
     def setUp(self):
+        sleep_patch = patch('ai_agent.rag_engine.rag_indexer.time.sleep')
+        sleep_patch.start()
+        self.addCleanup(sleep_patch.stop)
+
         # Arrange: tạo thư mục tài liệu tạm cho từng test.
         self.temporary_directory = TemporaryDirectory()
         self.addCleanup(self.temporary_directory.cleanup)
@@ -257,3 +268,168 @@ class RagIndexerTests(TestCase):
             KnowledgeChunk.objects.count(),
             chunk_count,
         )
+
+
+class EmbeddingRetryTests(SimpleTestCase):
+    def setUp(self):
+        sleep_patch = patch('ai_agent.rag_engine.rag_indexer.time.sleep')
+        self.sleep = sleep_patch.start()
+        self.addCleanup(sleep_patch.stop)
+        self.vector = [1.0] + [0.0] * (EMBEDDING_DIMENSIONS - 1)
+
+    def make_rate_limit_error(self, message='Please retry in 41.432501108s.'):
+        api_error = ClientError(429, {
+            'error': {
+                'code': 429,
+                'status': 'RESOURCE_EXHAUSTED',
+                'message': message,
+            },
+        })
+        error = GoogleGenerativeAIError(f'Error embedding content: {api_error}')
+        error.__cause__ = api_error
+        return error
+
+    def test_sends_one_chunk_at_a_time_with_a_pause(self):
+        model = Mock()
+        model.embed_documents.return_value = [self.vector]
+
+        result = embed_documents_with_retry(model, ['Đoạn một', 'Đoạn hai'])
+
+        self.assertEqual(result, [self.vector, self.vector])
+        self.assertEqual(model.embed_documents.call_args_list, [
+            call(['Đoạn một']), call(['Đoạn hai']),
+        ])
+        self.assertEqual(self.sleep.call_args_list, [
+            call(EMBEDDING_REQUEST_INTERVAL), call(EMBEDDING_REQUEST_INTERVAL),
+        ])
+
+    def test_retries_only_failed_chunk_and_keeps_previous_result(self):
+        model = Mock()
+        model.embed_documents.side_effect = [
+            [self.vector], self.make_rate_limit_error(), [self.vector],
+        ]
+        progress = Mock()
+
+        result = embed_documents_with_retry(
+            model, ['Đoạn một', 'Đoạn hai'], progress_callback=progress,
+        )
+
+        self.assertEqual(result, [self.vector, self.vector])
+        self.assertEqual(model.embed_documents.call_args_list, [
+            call(['Đoạn một']), call(['Đoạn hai']), call(['Đoạn hai']),
+        ])
+        self.assertEqual(self.sleep.call_args_list, [
+            call(EMBEDDING_REQUEST_INTERVAL), call(EMBEDDING_REQUEST_INTERVAL),
+            call(30), call(14),
+        ])
+        self.assertTrue(any('44 giây' in item.args[0] for item in progress.call_args_list))
+
+    def test_reads_retry_delay_from_response_text(self):
+        api_error = ClientError(429, {
+            'error': {
+                'code': 429,
+                'status': 'RESOURCE_EXHAUSTED',
+                'message': 'Minute quota exceeded',
+                'details': [{
+                    '@type': 'type.googleapis.com/google.rpc.RetryInfo',
+                    'retryDelay': '10s',
+                }],
+            },
+        })
+        error = GoogleGenerativeAIError('Error embedding content')
+        error.__cause__ = api_error
+
+        self.assertEqual(get_embedding_retry_delay(error), 12)
+
+    def test_uses_one_minute_when_retry_delay_is_missing(self):
+        model = Mock()
+        model.embed_documents.side_effect = [
+            self.make_rate_limit_error('Too many requests'), [self.vector],
+        ]
+
+        embed_documents_with_retry(model, ['Đoạn một'])
+
+        self.assertEqual(self.sleep.call_args_list, [
+            call(EMBEDDING_REQUEST_INTERVAL), call(30), call(30),
+        ])
+
+    def test_stops_after_three_retries(self):
+        model = Mock()
+        model.embed_documents.side_effect = self.make_rate_limit_error()
+
+        with self.assertRaisesMessage(RuntimeError, 'sau 3 lần thử lại'):
+            embed_documents_with_retry(model, ['Đoạn một'])
+
+        self.assertEqual(model.embed_documents.call_count, EMBEDDING_MAX_RETRIES + 1)
+        self.assertEqual(self.sleep.call_count, 1 + EMBEDDING_MAX_RETRIES * 2)
+
+    def test_does_not_retry_daily_or_zero_quota(self):
+        for message in ['EmbedContentRequestsPerDay', 'Daily quota exceeded', 'limit: 0']:
+            with self.subTest(message=message):
+                self.sleep.reset_mock()
+                model = Mock()
+                error = self.make_rate_limit_error(message)
+                model.embed_documents.side_effect = error
+
+                with self.assertRaises(GoogleGenerativeAIError) as raised:
+                    embed_documents_with_retry(model, ['Đoạn một'])
+
+                self.assertIs(raised.exception, error)
+                model.embed_documents.assert_called_once_with(['Đoạn một'])
+                self.sleep.assert_called_once_with(EMBEDDING_REQUEST_INTERVAL)
+
+    def test_does_not_retry_other_errors(self):
+        model = Mock()
+        error = ValueError('400 Invalid API key')
+        model.embed_documents.side_effect = error
+
+        with self.assertRaises(ValueError) as raised:
+            embed_documents_with_retry(model, ['Đoạn một'])
+
+        self.assertIs(raised.exception, error)
+        model.embed_documents.assert_called_once()
+        self.sleep.assert_called_once_with(EMBEDDING_REQUEST_INTERVAL)
+
+    def test_rejects_invalid_vector_dimensions(self):
+        model = Mock()
+        model.embed_documents.return_value = [[1.0, 0.0]]
+
+        with self.assertRaisesMessage(ValueError, 'sai số chiều'):
+            embed_documents_with_retry(model, ['Đoạn một'])
+
+        model.embed_documents.assert_called_once()
+
+    def test_rejects_missing_or_extra_vectors(self):
+        for result in [[], [self.vector, self.vector]]:
+            with self.subTest(vector_count=len(result)):
+                model = Mock()
+                model.embed_documents.return_value = result
+
+                with self.assertRaisesMessage(ValueError, 'đúng một vector'):
+                    embed_documents_with_retry(model, ['Đoạn một'])
+
+                model.embed_documents.assert_called_once()
+
+    def test_empty_input_does_not_call_google_or_sleep(self):
+        model = Mock()
+
+        self.assertEqual(embed_documents_with_retry(model, []), [])
+        model.embed_documents.assert_not_called()
+        self.sleep.assert_not_called()
+
+    @override_settings(AI_EMBEDDING_DIMENSIONS=EMBEDDING_DIMENSIONS)
+    @patch('ai_agent.rag_engine.rag_indexer.transaction.atomic')
+    @patch('ai_agent.rag_engine.rag_indexer.load_markdown_documents')
+    def test_failed_rebuild_does_not_start_database_transaction(self, loader, atomic):
+        loader.return_value = [{
+            'title': 'Đặt vé',
+            'content': 'Hướng dẫn giữ ghế.',
+            'source_path': 'customer/booking.md',
+        }]
+        model = Mock()
+        model.embed_documents.side_effect = self.make_rate_limit_error()
+
+        with self.assertRaises(RuntimeError):
+            rebuild_rag_index(embedding_model=model)
+
+        atomic.assert_not_called()

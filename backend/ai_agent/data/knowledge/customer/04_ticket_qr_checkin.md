@@ -3,7 +3,7 @@
 > Đối tượng: Customer  
 > Danh mục kiến thức: POLICY  
 > Nguồn: Quy trình phát hành và soát vé của SmartEventTicketing  
-> Cập nhật: 17/08/2026
+> Cập nhật: 05/09/2026
 
 ## Mục đích
 
@@ -41,22 +41,23 @@ Một vé điện tử có thể hiển thị:
 - Trạng thái đã check-in hay chưa.
 - Mã QR riêng của vé.
 
-## Sử dụng mã QR
+## Lấy mã vé và check-in thủ công
 
-Khách hàng mở vé và chọn **Xem mã QR**. Khi vé chưa được sử dụng, hệ thống hiển thị QR để Ban tổ chức quét tại khu vực check-in.
+1. Mở email thanh toán thành công hoặc đăng nhập và vào **Vé của tôi**.
+2. Chọn đúng sự kiện, loại vé và ghế. Trên website, bấm **Xem mã QR** để xem QR cùng chuỗi mã vé phía dưới.
+3. Đưa mã vé đầy đủ cho Ban tổ chức. Mã cần nhập là chuỗi mã vé, không phải mã đơn hàng, số ghế hay mã giao dịch ngân hàng.
+4. Ban tổ chức nhập hoặc dán mã vào mục **Soát vé** bằng tài khoản sở hữu sự kiện.
+5. Chờ hệ thống báo soát vé thành công trước khi vào.
 
-Khách hàng nên:
+QR mã hóa chính chuỗi mã vé dùng để check-in thủ công. Giao diện BTC hiện chưa có chức năng mở camera để quét QR. Thiết bị quét ngoài có thể dùng nếu thiết bị đưa được chuỗi mã vào ô nhập; không bắt buộc có thiết bị này để soát vé.
 
-- Chuẩn bị sẵn mã QR trước khi đến lượt check-in.
-- Tăng độ sáng màn hình nếu máy quét khó nhận diện.
-- Sử dụng đúng QR của đúng người và đúng ghế.
-- Giữ thiết bị có đủ pin trong ngày diễn ra sự kiện.
+Một đơn mua nhiều ghế có nhiều mã vé riêng. Cần kiểm tra từng vé, không dùng một mã cho cả đơn. Có thể chuẩn bị email trước khi đến sự kiện; BTC vẫn cần kết nối hệ thống để xác nhận trạng thái vé mới nhất.
 
 ## Bảo mật mã QR
 
 Mã QR là thông tin xác nhận vé và không nên chia sẻ công khai. Không đăng ảnh QR lên mạng xã hội hoặc gửi cho người không liên quan.
 
-Nếu người khác sử dụng mã QR trước, vé sẽ được đánh dấu đã check-in và không thể quét lần thứ hai. Hệ thống không thể phân biệt người quét đầu tiên có phải chủ tài khoản hay không chỉ dựa trên QR.
+Nếu người khác sử dụng mã vé trước, vé sẽ được đánh dấu đã check-in và không thể dùng lần thứ hai. Hệ thống không thể xác minh người cầm mã có phải chủ tài khoản chỉ dựa trên QR hoặc chuỗi mã vé. Cần bảo mật cả hai, không chỉ ảnh QR.
 
 Khi liên hệ hỗ trợ, khách hàng nên cung cấp mã đơn nhưng không gửi toàn bộ QR nếu chưa được yêu cầu qua kênh hỗ trợ tin cậy.
 
@@ -66,14 +67,14 @@ Chỉ tài khoản Organizer sở hữu sự kiện của vé mới được ph�
 
 Backend kiểm tra:
 
-- Mã QR có tồn tại không.
+- Mã vé có tồn tại không.
 - Đơn của vé có đang `PAID` không.
-- Vé có thuộc sự kiện của Organizer đang quét không.
+- Vé có thuộc sự kiện của Organizer đang soát vé không.
 - Vé đã được check-in trước đó chưa.
 
 ## Check-in thành công
 
-Khi QR hợp lệ:
+Khi mã vé hợp lệ:
 
 - Vé được đánh dấu `is_checked_in = true`.
 - Hệ thống lưu thời gian check-in.
@@ -81,23 +82,27 @@ Khi QR hợp lệ:
 - Trang “Vé của tôi” hiển thị trạng thái **Đã soát vé** sau khi tải lại.
 - QR không còn được hiển thị như một vé chưa sử dụng.
 
-Quá trình kiểm tra và cập nhật vé được khóa trong transaction để hạn chế hai thiết bị quét cùng một QR tại cùng thời điểm.
+Quá trình kiểm tra và cập nhật vé được khóa trong transaction để hạn chế hai yêu cầu cùng xác nhận một vé tại cùng thời điểm.
 
 ## Check-in không thành công
 
 Các trường hợp thường gặp:
 
-- **QR không tồn tại:** mã sai, thiếu ký tự hoặc không thuộc hệ thống.
+- **Mã vé không tồn tại:** mã sai, thiếu ký tự hoặc không thuộc hệ thống. Kiểm tra có nhập nhầm mã đơn hay tên ghế không.
 - **Vé chưa được thanh toán:** Order chưa ở trạng thái `PAID`.
-- **Sai Ban tổ chức:** người quét không sở hữu sự kiện của vé.
+- **Sai Ban tổ chức:** tài khoản soát vé không sở hữu sự kiện của vé.
 - **Vé đã sử dụng:** QR đã được check-in trước đó.
 - **Vé không còn hiệu lực:** trạng thái đơn không còn cho phép sử dụng vé.
 
-Khách hàng không nên tự tạo hoặc chỉnh sửa chuỗi QR. Nếu vé hợp lệ nhưng không quét được, hãy cung cấp mã đơn và thông tin vé cho nhân viên sự kiện để kiểm tra.
+Khách hàng không nên tự tạo hoặc chỉnh sửa mã vé. Nếu vé không được chấp nhận, hãy cung cấp mã đơn và thông tin vé cho người phụ trách sự kiện để kiểm tra qua kênh tin cậy, không đăng mã vé công khai.
 
 ## Email và vé trên hệ thống
 
-Sau khi thanh toán được xử lý thành công, hệ thống có thể gửi email thông báo kèm thông tin vé. Tuy nhiên, “Vé của tôi” là nơi lấy trạng thái vé mới nhất từ database.
+Sau khi thanh toán được xử lý thành công, hệ thống thực hiện gửi email có thông tin từng vé, ảnh QR và mã vé để check-in thủ công. Không cần đăng nhập website chỉ để đọc mã đã nhận trong email. Nếu ứng dụng email không hiện ảnh QR, có thể dùng chuỗi mã vé bằng chữ.
+
+Email là thông tin tại thời điểm gửi, không tự đổi sau khi vé đã check-in. “Vé của tôi” và kết quả soát vé của BTC lấy trạng thái mới nhất từ database. Không coi ảnh QR còn trong email là bằng chứng vé vẫn chưa được dùng.
 
 Không nhận được email không đồng nghĩa với việc chưa có vé. Khách hàng nên kiểm tra đúng tài khoản, thư mục spam và trang “Vé của tôi” trước khi liên hệ hỗ trợ.
+
+**Có thể tự check-in bằng chatbot không?** Không. Chatbot chỉ hướng dẫn cách lấy và sử dụng vé; thao tác xác nhận do BTC thực hiện ở mục “Soát vé”.
 
