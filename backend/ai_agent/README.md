@@ -1,78 +1,69 @@
-# AI Agent: chatbot và dữ liệu RAG
+# Chatbot và dữ liệu RAG
 
-Chỉ Customer/Organizer đã đăng nhập, còn hoạt động được dùng chatbot; Admin, staff và superuser bị chặn. API chính: `POST /api/ai/chat/`. API đọc lịch sử: `GET /api/ai/sessions/`, `GET /api/ai/sessions/<id>/messages/`; người dùng chỉ xem phiên của mình. Widget hiện chỉ dùng phiên đang mở, chưa có danh sách lịch sử cũ.
+Dành cho Customer/Organizer đã đăng nhập, còn hoạt động; Admin, staff và superuser bị chặn. API chính: `POST /api/ai/chat/`.
 
-## Ba chế độ
+## Chức năng
 
-| Chế độ | Cách xử lý | Google API |
-|---|---|---|
-| `GENERAL` — Hỏi hệ thống | Tìm tài liệu theo vai trò rồi trả lời quy trình/chính sách; không tra đơn hay ghế cụ thể | Embedding + chat |
-| `RECOMMEND_EVENT` — Tìm sự kiện | Query PostgreSQL theo form, tối đa 5 sự kiện đã xuất bản/chưa diễn ra; hoặc kiểm tra ghế theo tên | Không |
-| `PLAN_EVENT` — Tư vấn tổ chức | Python tính từ `EventService` và giá vé trong database; RAG/Gemini diễn giải | Có cho diễn giải |
-
-**Điều kiện tìm kiếm/dự toán phải nhập ở form, không tự suy ra toàn bộ từ câu chat.** Form tìm kiếm có danh mục, địa điểm, giá tối đa hoặc tên sự kiện; API hỗ trợ thêm ngày nhưng UI chưa có ô ngày. Form tổ chức cần loại sự kiện, số khách nguyên dương, chất lượng, địa điểm và ít nhất một nhóm dịch vụ. Thời lượng tùy chọn nhưng phải dương nếu nhập; dịch vụ theo giờ dùng thời lượng nhập hoặc mặc định của dịch vụ.
-
-Tin nhắn tối đa 1.000 ký tự; ngữ cảnh lấy tối đa 8 tin gần nhất. Câu người dùng trước đó được ghép với câu hiện tại khi tìm tài liệu. Tìm/kiểm tra ghế không giữ ghế hay đặt vé; số ghế là trạng thái tại lúc truy vấn. Giá dịch vụ là mẫu demo, giá vé tham khảo chỉ từ hệ thống, không phải báo giá thị trường hay cam kết đặt dịch vụ.
-
-## Vị trí dữ liệu và code
-
-| Đường dẫn trong `backend/ai_agent/` | Vai trò |
+| Chế độ | Cách hoạt động |
 |---|---|
-| `data/knowledge/customer/`, `data/knowledge/organizer/` | Markdown kiến thức theo vai trò |
-| `data/event_services.json` | Nguồn nạp dịch vụ mẫu vào `EventService` |
-| `data/evaluation/rag_questions.json` | Câu hỏi đánh giá, không phải nguồn trả lời |
-| `rag_engine/` | Tạo/tìm vector, trả lời RAG và tính toán nghiệp vụ |
-| `management/commands/` | Các lệnh seed, rebuild và đánh giá |
-| `models.py`, `serializers.py`, `views.py`, `urls.py` | Lưu dữ liệu, kiểm tra request, xử lý và định tuyến API |
+| `GENERAL` — Hỏi đáp | Tìm tài liệu theo vai trò bằng embedding/pgvector, gọi Gemini trả lời |
+| `RECOMMEND_EVENT` — Sự kiện | Tìm tối đa 5 sự kiện sắp diễn ra hoặc kiểm tra ghế từ database; không gọi Google |
+| `PLAN_EVENT` — Tổ chức | Python tính chi phí/giá vé từ database, kết hợp RAG/Gemini để diễn giải |
 
-Giữ nguyên vị trí `data/`: code đọc từ `settings.BASE_DIR` (`backend/`). Bộ nạp đọc mọi `*.md` dưới hai thư mục `knowledge/` trên; **không thêm README cài đặt hoặc bí mật vào đó**. README này nằm ngoài vùng nạp.
+**Điều kiện tìm kiếm/tổ chức phải nhập trên form**, không tự suy ra đầy đủ từ câu chat. Giá dịch vụ là dữ liệu demo; giá vé tham khảo lấy từ hệ thống, không phải khảo sát thị trường. Kiểm tra ghế không giữ ghế hoặc đặt vé.
 
-## Chuẩn bị và nạp lần đầu
+Mỗi tin tối đa 1.000 ký tự; dùng 8 tin gần nhất làm ngữ cảnh. Widget giữ phiên hiện tại, chưa tải lại lịch sử cũ khi refresh. API lịch sử `GET /api/ai/sessions/` và `GET /api/ai/sessions/<id>/messages/` chỉ cho xem phiên của chính người dùng.
 
-Hoàn tất PostgreSQL + pgvector, môi trường Python, requirements và migration theo [SETUP](../../documents/SETUP.md). Điền các biến có sẵn trong [backend/.env.example](../.env.example) vào `backend/.env`:
+## Chuẩn bị lần đầu
 
-```dotenv
-GOOGLE_API_KEY=your-google-api-key
-AI_CHAT_MODEL=gemini-3.6-flash
-AI_EMBEDDING_MODEL=gemini-embedding-2
-AI_EMBEDDING_DIMENSIONS=768
-AI_MAX_CONTEXT_CHUNKS=4
-```
+Hoàn tất [SETUP](../../documents/SETUP.md): PostgreSQL/pgvector, thư viện và migration. Điền `GOOGLE_API_KEY` riêng vào `backend/.env`; giữ các biến model từ [mẫu cấu hình](../.env.example).
 
-Đây là model mặc định của repository, không đảm bảo tài khoản Google có quyền truy cập/còn quota. Không commit key; khởi động lại backend sau khi đổi cấu hình. Giữ số chiều `768` để khớp cột vector hiện tại.
+Model phải được tài khoản Google hỗ trợ, còn quota; số chiều embedding giữ **768**. Khởi động lại backend sau khi đổi cấu hình. Không commit key.
 
-Trong CMD tại `backend`, sau khi kích hoạt môi trường và kiểm tra đúng database:
+Trong CMD tại `backend/`, đã kích hoạt môi trường và chọn đúng database:
 
 ```cmd
-chcp 65001
 set PYTHONUTF8=1
 python manage.py seed_ai_data
 python manage.py rebuild_rag_index
 ```
 
-- `seed_ai_data`: tạo/cập nhật dịch vụ theo `code` từ JSON, không gọi Google và không tạo sự kiện. Chạy lại ghi đè các mã tương ứng bằng dữ liệu mẫu.
-- `rebuild_rag_index`: chia Markdown, gọi embedding và ghi database; thay chunk, xóa tài liệu cũ thuộc nguồn customer/organizer không còn trên đĩa. Lệnh dùng quota Google.
+| Lệnh | Tác dụng | Khi chạy lại |
+|---|---|---|
+| `seed_ai_data` | Tạo/cập nhật `EventService` từ JSON theo mã dịch vụ, không gọi Google | Khi đổi JSON hoặc dùng database mới; ghi đè dữ liệu các mã tương ứng |
+| `rebuild_rag_index` | Chia Markdown, tạo embedding và thay dữ liệu tra cứu trong database; dùng quota Google | Khi đổi tài liệu/model embedding hoặc dùng database mới |
 
-**Không chạy lại khi chỉ khởi động server.** Rebuild khi đổi tài liệu/model embedding; không cần rebuild khi chỉ thêm câu hỏi đánh giá. Database mới cần nạp dữ liệu riêng. Chế độ tìm sự kiện cần Event có sẵn; xem [seed sự kiện](../../database/README.md) và cảnh báo xóa dữ liệu trước khi chạy.
+Rebuild cũng xóa tài liệu thuộc nguồn customer/organizer không còn trên đĩa. **Không chạy hai lệnh mỗi lần mở server.** Tìm sự kiện cần Event có sẵn; xem [dữ liệu mẫu](../../database/README.md) và cảnh báo trước khi seed.
 
-## Đánh giá và kiểm thử
+## File cần biết
 
-Tại `backend`, chạy một lần đánh giá và lưu file riêng, tránh ghi đè báo cáo đã commit:
+| Trong `backend/ai_agent/` | Vai trò |
+|---|---|
+| `data/knowledge/customer/`, `data/knowledge/organizer/` | Tài liệu Markdown dùng để trả lời |
+| `data/event_services.json` | Giá dịch vụ mẫu để nạp database |
+| `rag_engine/` | Nạp/tìm vector, trả lời RAG và tính toán |
+| `models.py`, `serializers.py`, `views.py`, `urls.py` | Database, kiểm tra đầu vào, xử lý API |
+| `management/commands/` | Các lệnh nạp và đánh giá |
+| `data/evaluation/rag_questions.json` | Câu hỏi đánh giá, không dùng làm tài liệu trả lời |
+
+Giữ nguyên đường dẫn dữ liệu. Bộ nạp đọc mọi `*.md` trong hai thư mục knowledge trên; không đặt README cài đặt hoặc bí mật vào đó.
+
+## Kiểm tra và lỗi thường gặp
+
+Test không gọi Google thật, chạy tại `backend/`: `python manage.py test ai_agent -v 2 --keepdb`. Vẫn cần PostgreSQL/pgvector và quyền tạo database test.
+
+Đánh giá tìm tài liệu trên 30 câu hỏi:
 
 ```cmd
 python manage.py evaluate_rag --report ..\docs\RAG_EVALUATION_LOCAL.md
 ```
 
-Lệnh mặc định đo retrieval (tìm tài liệu) trên 30 câu hỏi, **dùng quota embedding nhưng không gọi chat**. Nếu cần đo cả câu trả lời, thêm `--with-generation --generation-limit 5` vào cùng lệnh; lượt đó chạy cả retrieval và tối đa 5 case generation. Xem [hướng dẫn evaluation](../../docs/RAG_EVALUATION.md) về chỉ số, phạm vi và cách đọc kết quả; không coi nó là kiểm thử đầy đủ form, memory hoặc công cụ nghiệp vụ.
+Lệnh dùng quota embedding, chưa gọi chat. Thêm `--with-generation --generation-limit 5` nếu cần đánh giá cả câu trả lời. Xem [hướng dẫn evaluation](../../docs/RAG_EVALUATION.md); không chạy đánh giá thật trong CI hoặc ghi đè báo cáo muốn giữ.
 
-Test không dùng Google thật: `python manage.py test ai_agent -v 2` (dùng mock, vẫn cần PostgreSQL/pgvector và quyền tạo database test). Không đưa rebuild/evaluation gọi Google thật vào CI, không dùng cấu hình database sản xuất để test.
+- Không thấy widget: kiểm tra vai trò/trạng thái tài khoản.
+- Thiếu thông tin: kiểm tra đúng database, tài liệu theo vai trò và đã rebuild chưa.
+- AI lỗi/chậm: kiểm tra key, model, quota và log; không gửi liên tục khi hết quota. Tìm sự kiện vẫn không cần Google; dự toán có thể trả số liệu khi diễn giải lỗi.
+- Thiếu sự kiện/dịch vụ: kiểm tra dữ liệu và điều kiện form; hệ thống không tự tìm dịch vụ trên Internet.
+- Lỗi vector: kiểm tra pgvector phía PostgreSQL, migration và số chiều 768.
 
-## Giới hạn và xử lý nhanh
-
-- Không thấy widget: kiểm tra vai trò và trạng thái tài khoản.
-- Không đủ thông tin: kiểm tra tài liệu đúng vai trò/index; chỉ dùng đoạn có cosine distance ≤ `0.40`, không tự tìm web mở.
-- AI gián đoạn: kiểm tra key, quyền model, quota và log; ngừng gọi lặp khi hết quota. Tìm sự kiện không cần Google; dự toán có thể vẫn trả số liệu khi diễn giải lỗi.
-- Không tìm thấy sự kiện/dịch vụ: kiểm tra đúng database và điều kiện form. Sự kiện báo cáo đã diễn ra không được gợi ý; thiếu dịch vụ phù hợp thì báo thiếu dữ liệu.
-- Lỗi vector: kiểm tra pgvector trên server, migration và số chiều `768`.
-
-Tài liệu, câu hỏi, lịch sử gần nhất và dữ liệu dùng để diễn giải có thể được gửi tới Google. Không đưa bí mật/dữ liệu khách hàng thật vào demo; nội dung tài liệu và output AI không phải lệnh để thay đổi quyền hay thực thi hành động.
+Tài liệu, câu hỏi, lịch sử gần nhất và số liệu tư vấn có thể gửi tới Google. Không đưa bí mật hoặc dữ liệu khách hàng thật vào demo.

@@ -1,33 +1,32 @@
 # Cài đặt và chạy SmartEventTicketing
 
-Hướng dẫn cho **Windows Command Prompt (CMD)**, không phải PowerShell. Ví dụ dùng `%USERPROFILE%\SmartEventTicketing`; nếu project ở `D:\SmartEventTicketing`, thay đường dẫn tương ứng. Database và tài khoản trên máy độc lập với website online.
+Dùng **Windows Command Prompt (CMD)**. Hướng dẫn clone vào `%USERPROFILE%\SmartEventTicketing`; nếu lưu nơi khác, thay đường dẫn tương ứng. Dữ liệu/tài khoản local độc lập với website online.
 
-## 1. Chuẩn bị công cụ
+## 1. Cài công cụ
 
-| Công cụ | Yêu cầu |
+| Công cụ | Phiên bản/mục đích |
 |---|---|
-| [Git](https://git-scm.com/downloads) | Để clone source |
-| [Python](https://www.python.org/downloads/) | 3.12, cùng phiên bản dùng trong CI |
-| [Node.js](https://nodejs.org/en/download) | `^22.18.0 \|\| >=24.12.0` theo package.json; có thể chọn Node 22 từ 22.18.0 |
-| [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) | Chạy PostgreSQL có sẵn pgvector; không bắt buộc nếu server PostgreSQL hiện có đã cài pgvector |
+| [Git](https://git-scm.com/downloads) | Tải source từ GitHub |
+| [Python](https://www.python.org/downloads/) | 3.12, cùng phiên bản CI |
+| [Node.js](https://nodejs.org/en/download) | Node 22 từ 22.18.0, hoặc từ 24.12.0 theo package.json |
+| [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) | Chạy PostgreSQL có sẵn pgvector; bỏ qua nếu đã có PostgreSQL với pgvector |
 
 Mở CMD mới sau khi cài, kiểm tra:
 
-~~~bat
+```cmd
 git --version
 py -3.12 --version
 node --version
 npm --version
-docker --version
-~~~
+```
 
-Nếu dùng Docker, mở Docker Desktop và hoàn tất yêu cầu WSL 2/khởi động lại máy của bộ cài. **pgAdmin chỉ là công cụ quản lý; dịch vụ PostgreSQL mới là thành phần backend cần kết nối.**
+Các lệnh phải hiện phiên bản. Nếu dùng Docker, mở Docker Desktop và hoàn tất yêu cầu WSL 2/khởi động lại của bộ cài trước bước 3. **pgAdmin là công cụ quản lý, không thay thế dịch vụ PostgreSQL.**
 
-## 2. Clone và cài backend
+## 2. Clone và cài thư viện backend
 
-Nếu đã có project, dùng thư mục đó, không clone đè. Chỉ tạo môi trường `venv` khi chưa có:
+Nếu đã clone, dùng thư mục hiện có; không tạo lại `venv` nếu đã có môi trường phù hợp.
 
-~~~bat
+```cmd
 cd /d "%USERPROFILE%"
 git clone https://github.com/mantks0803/SmartEventTicketing.git
 cd SmartEventTicketing
@@ -36,44 +35,38 @@ venv\Scripts\activate.bat
 set PYTHONUTF8=1
 python -m pip install --upgrade pip
 python -m pip install -r backend\requirements.txt
-~~~
+```
 
-Đầu dòng thường xuất hiện `(venv)` khi kích hoạt thành công. Các bước 3–4 bên dưới vẫn thực hiện từ thư mục gốc project.
+Đầu dòng thường có `(venv)`. Chờ cài thư viện xong, không có lỗi, rồi tiếp tục từ **thư mục gốc project**.
 
-## 3. Chuẩn bị PostgreSQL — chọn một cách
+## 3. Chuẩn bị database — chọn một cách
 
-### Cách A: Docker có sẵn pgvector
+**Cài mới bằng Docker:** khi Docker Desktop đã chạy và chưa có container cùng tên, chạy một lần:
 
-Chờ Docker Desktop sẵn sàng. Chỉ chạy lệnh tạo container **một lần**, khi chưa có container cùng tên:
-
-~~~bat
+```cmd
 docker run --name smartticket-postgres -e POSTGRES_DB=smart_booking_db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5433:5432 -v smartticket_pgdata:/var/lib/postgresql/data -d pgvector/pgvector:0.8.6-pg16
 docker exec smartticket-postgres pg_isready -U postgres -d smart_booking_db
-~~~
+```
 
-Thấy `accepting connections` là server sẵn sàng. Backend trên máy kết nối cổng **5433**; cổng bên trong container là 5432. Tài khoản `postgres/postgres` chỉ dùng local.
+Thấy `accepting connections` là sẵn sàng. Backend kết nối cổng **5433**; tài khoản `postgres/postgres` chỉ dùng local. Nếu đã tạo container, dùng `docker start smartticket-postgres`, không chạy lại `docker run`.
 
-Nếu đã tạo container theo hướng dẫn, chỉ cần `docker start smartticket-postgres`. Không xóa container/volume để xử lý lỗi trùng tên. Volume `smartticket_pgdata` giữ dữ liệu qua những lần tắt/bật, nhưng không thay thế backup. Nếu volume đã có dữ liệu, không coi đây là database mới rỗng.
+Volume `smartticket_pgdata` lưu dữ liệu qua các lần tắt/bật, không phải backup. **Không xóa container/volume để sửa lỗi trùng tên; volume có sẵn có thể chứa dữ liệu cần giữ.**
 
-### Cách B: PostgreSQL cài trực tiếp
+**Đã có PostgreSQL trực tiếp:** bật dịch vụ, tạo database `smart_booking_db` bằng pgAdmin nếu chưa có. Ghi lại user/password/host/port (thường **5432**). Server phải được cài pgvector; `pip install pgvector` không thay thế extension trên server. Migration cần quyền tạo extension `vector`.
 
-Bật dịch vụ PostgreSQL, dùng pgAdmin hoặc công cụ quản trị của bạn để tạo database mới tên `smart_booking_db` nếu chưa tồn tại. Giữ nguyên database có dữ liệu; ghi lại host, port, username và password để cấu hình bước 4. Port thường là **5432**, tùy máy.
+## 4. Điền cấu hình
 
-Server phải có extension **pgvector** tương thích. Migration sẽ tạo extension `vector`, nên tài khoản chạy migrate cần quyền phù hợp. Chỉ `pip install pgvector` không cài extension cho server; nếu chưa có, dùng cách Docker hoặc cài pgvector trên đúng server.
+Tại **thư mục gốc**, tạo file từ mẫu nếu chưa có:
 
-## 4. Tạo cấu hình local
-
-Từ thư mục gốc, copy mẫu **chỉ khi chưa có** `.env`:
-
-~~~bat
+```cmd
 if not exist backend\.env copy backend\.env.example backend\.env
 if not exist frontend\.env copy frontend\.env.example frontend\.env
 notepad backend\.env
-~~~
+```
 
-Với Docker ở bước 3, điền:
+Với Docker ở bước 3, sửa các dòng sau, giữ các biến còn lại từ file mẫu rồi lưu:
 
-~~~dotenv
+```dotenv
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 DB_NAME=smart_booking_db
@@ -82,119 +75,84 @@ DB_PASSWORD=postgres
 DB_HOST=127.0.0.1
 DB_PORT=5433
 FRONTEND_URL=http://localhost:5173
-~~~
+```
 
-Nếu dùng PostgreSQL cài trực tiếp, thay thông tin kết nối bằng cấu hình của bạn, không dùng nhầm cổng Docker. Giữ các biến khác từ [mẫu backend](../backend/.env.example); khóa dịch vụ có thể để trống để chạy phần cơ bản. `SECRET_KEY` mẫu chỉ dành cho local.
+Nếu dùng PostgreSQL trực tiếp, thay bằng thông tin kết nối của bạn. Trong `frontend/.env`, giữ:
 
-File `frontend/.env` cần:
-
-~~~dotenv
+```dotenv
 VITE_API_URL=http://127.0.0.1:8000/api/
-~~~
+```
 
-**Không commit `.env` thật và không đặt secret trong `VITE_*`** vì trình duyệt đọc được các biến này. Biến môi trường đã đặt trong Windows/CMD có thể ghi đè `.env`.
+Khóa dịch vụ có thể để trống để chạy phần cơ bản; xem mục cuối. **Không commit `.env` hoặc đặt secret trong `VITE_*` vì trình duyệt đọc được.** Secret/tài khoản mẫu chỉ dành cho local.
 
-## 5. Tạo bảng, tài khoản và dữ liệu tùy chọn
+## 5. Tạo bảng và tài khoản
 
-Tại CMD đã kích hoạt `venv`, kiểm tra đúng database trước:
+Trong CMD đã kích hoạt `venv`, chuyển vào **backend** và kiểm tra cấu hình database:
 
-~~~bat
+```cmd
 cd backend
 python manage.py shell -c "from django.db import connection; c=connection.settings_dict; print(c['NAME'], c['HOST'], c['PORT'])"
-~~~
+```
 
-Với Docker mặc định, kết quả là `smart_booking_db 127.0.0.1 5433`. Nếu sai, dừng và sửa cấu hình. Nếu đúng database local dự định sử dụng:
+Với Docker ở trên, kết quả phải là `smart_booking_db 127.0.0.1 5433`. Nếu khác, kiểm tra `.env` và biến môi trường CMD/Windows có thể ghi đè nó. Khi đã đúng database local muốn dùng:
 
-~~~bat
+```cmd
 python manage.py migrate
 python manage.py createsuperuser
-~~~
+```
 
-`migrate` tạo/cập nhật bảng; lần cài đầu không cần `makemigrations`. `createsuperuser` tạo Admin dùng được trên website và Django Admin; bỏ qua nếu đã có tài khoản. Khi nhập mật khẩu, CMD không hiện ký tự là bình thường.
+`migrate` tạo/cập nhật bảng; không cần chạy `makemigrations` khi cài project. `createsuperuser` tạo Admin, bỏ qua nếu đã có. Nhập mật khẩu không hiện ký tự trong CMD là bình thường.
 
-Nạp dữ liệu là **tùy chọn**, xem [hướng dẫn database](../database/README.md):
+**Dữ liệu mẫu là tùy chọn:** làm theo [hướng dẫn database](../database/README.md) nếu muốn có sự kiện hoặc biểu đồ báo cáo. `seed_data.py` xóa toàn bộ sự kiện cũ và dữ liệu liên quan, chỉ chạy trên database mới không có dữ liệu cần giữ. Không cần file SQL backup để cài lần đầu; chỉ migrate thì chưa có sự kiện mẫu.
 
-- Muốn có sự kiện và ghế mẫu: seed cơ bản tạo 32 sự kiện nhưng **xóa toàn bộ sự kiện cũ cùng dữ liệu liên quan**, chỉ chạy trên database mới không có dữ liệu cần giữ.
-- Muốn có đơn PAID/vé để xem biểu đồ: dùng database riêng `smart_booking_report_demo`. Seed báo cáo thêm 8 sự kiện riêng và từ chối nạp trùng.
-- Nếu đã có dữ liệu, không chạy lại seed chỉ vì vừa mở server hoặc cập nhật tài liệu. Không cần file SQL backup để cài demo mới.
+## 6. Mở website
 
-## 6. Chạy hai server
+Tại **backend**, chạy và giữ cửa sổ này mở:
 
-Trong CMD backend:
-
-~~~bat
+```cmd
 python manage.py runserver
-~~~
+```
 
-Giữ cửa sổ này mở. Django Admin ở [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/).
+Django Admin: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/).
 
-Mở **CMD thứ hai**:
+Mở **CMD thứ hai** để cài và chạy frontend:
 
-~~~bat
+```cmd
 cd /d "%USERPROFILE%\SmartEventTicketing\frontend"
 npm ci
 npm run dev
-~~~
+```
 
-Mở địa chỉ Vite hiển thị, thường là [http://localhost:5173](http://localhost:5173). Nếu Vite đổi cổng do 5173 đang bận, giải phóng cổng hoặc cập nhật `FRONTEND_URL` ở backend trước khi thử chuyển hướng thanh toán.
+Mở địa chỉ Vite hiển thị, thường là [http://localhost:5173](http://localhost:5173). Có thể đăng nhập bằng tài khoản Admin vừa tạo hoặc đăng ký Customer/Organizer. Chưa nạp dữ liệu thì danh sách sự kiện có thể trống.
 
-## 7. Chạy lại những lần sau
+**Những lần sau:** bật PostgreSQL, kích hoạt `venv`, chạy hai server theo [README chính](../README.md#cài-và-chạy). Không seed/rebuild RAG mỗi lần; chỉ migrate khi database mới hoặc có migration mới. Cài lại thư viện khi requirements/lockfile thay đổi. Dừng server bằng `Ctrl + C`; đổi `.env` thì khởi động lại server, đổi database thì đăng nhập lại.
 
-Bật dịch vụ PostgreSQL; nếu dùng Docker, mở Docker Desktop rồi chạy:
+## Dịch vụ tùy chọn
 
-~~~bat
-docker start smartticket-postgres
-~~~
+Điền khóa riêng trong `backend/.env`, theo [file mẫu](../backend/.env.example). Không dùng hoặc chia sẻ key của website online.
 
-CMD thứ nhất:
-
-~~~bat
-cd /d "%USERPROFILE%\SmartEventTicketing"
-venv\Scripts\activate.bat
-set PYTHONUTF8=1
-cd backend
-python manage.py runserver
-~~~
-
-CMD thứ hai:
-
-~~~bat
-cd /d "%USERPROFILE%\SmartEventTicketing\frontend"
-npm run dev
-~~~
-
-Dừng server bằng `Ctrl + C`. Không cần seed/rebuild RAG mỗi lần. Chỉ migrate khi database mới hoặc có migration mới; cài lại thư viện khi requirements/lockfile thay đổi. Sau khi sửa `.env`, khởi động lại server tương ứng. Khi chuyển database, đăng xuất rồi đăng nhập lại.
-
-## 8. Cấu hình dịch vụ — tùy chọn
-
-Điền khóa riêng vào `backend/.env`, không chia sẻ key của website online.
-
-| Dịch vụ | Biến cần điền | Nếu chưa cấu hình |
+| Dịch vụ | Cấu hình | Khi chưa có |
 |---|---|---|
 | PayOS | `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY` | Không tạo link thanh toán thật |
-| Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Xem ảnh URL có sẵn, chưa upload ảnh mới |
-| Email | `EMAIL_BACKEND`, các biến `EMAIL_*` và `DEFAULT_FROM_EMAIL` | Console backend chỉ in email vào terminal, không gửi Gmail |
-| Gemini | `GOOGLE_API_KEY` và cấu hình model | Hỏi đáp/diễn giải AI chưa đầy đủ; tìm sự kiện từ database không gọi Google |
+| Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Chưa upload ảnh mới |
+| Email | Đổi `EMAIL_BACKEND` sang `django.core.mail.backends.smtp.EmailBackend`, điền các biến SMTP `EMAIL_*` và `DEFAULT_FROM_EMAIL` | Mặc định chỉ in email vào terminal |
+| Gemini | `GOOGLE_API_KEY`, model được tài khoản hỗ trợ, nạp dữ liệu theo [AI Agent](../backend/ai_agent/README.md) | Hỏi đáp/diễn giải chưa đầy đủ; tìm sự kiện từ DB không gọi Google |
 
-**Email thật:** đổi `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`; cấu hình host, port, TLS, user, password và địa chỉ gửi theo nhà cung cấp. Với Gmail, dùng mật khẩu ứng dụng nếu tài khoản hỗ trợ, không nhập mật khẩu đăng nhập chính. Xem các tên biến trong [mẫu cấu hình](../backend/.env.example).
+Email Gmail dùng mật khẩu ứng dụng nếu tài khoản hỗ trợ, không dùng mật khẩu đăng nhập chính.
 
-**PayOS thật:** cấu hình webhook trỏ tới backend HTTPS công khai, dạng `https://<ten-mien-backend>/api/orders/webhook/payos/`, không phải địa chỉ frontend hoặc localhost. Giữ `PAYOS_SKIP_SIGNATURE_CHECK=False` trên server public. Thử không dùng tiền thật theo [hướng dẫn thanh toán local](PAYMENT_TEST.md).
+PayOS thật cần webhook backend HTTPS công khai: `https://<ten-mien-backend>/api/orders/webhook/payos/`, không phải localhost hoặc URL frontend. Giữ `PAYOS_SKIP_SIGNATURE_CHECK=False` trên server public. Thử không dùng tiền thật theo [hướng dẫn thanh toán local](PAYMENT_TEST.md).
 
-**Chatbot:** chọn model tài khoản Google hỗ trợ, giữ số chiều embedding 768, rồi nạp dịch vụ và tạo chỉ mục theo [hướng dẫn AI Agent](../backend/ai_agent/README.md). Rebuild/evaluation thật dùng quota Google, không chạy liên tục để thử.
+## Nếu chưa chạy được
 
-## 9. Lỗi thường gặp
-
-| Hiện tượng | Kiểm tra |
+| Lỗi | Kiểm tra |
 |---|---|
-| Không nhận lệnh Git/Python/npm | Đã cài, thêm PATH và mở CMD mới chưa |
-| Không tìm thấy Django | Đã kích hoạt `venv` và cài requirements chưa |
-| Docker chưa chạy/trùng tên container | Mở Docker Desktop; dùng container có sẵn đúng cấu hình, không xóa dữ liệu |
-| Không kết nối database | Dịch vụ PostgreSQL, host/cổng, tên DB, user/password và biến môi trường ghi đè |
-| `vector is not available` | Server PostgreSQL thiếu pgvector; pip không thay thế extension |
-| Trang chủ trống | API URL/backend, database đang chọn và sự kiện PUBLISHED |
-| Upload ảnh/thanh toán lỗi | Khóa Cloudinary/PayOS và log backend; không tắt chữ ký PayOS để né lỗi |
-| Không nhận email | Đang dùng console hay SMTP, thông tin gửi, thư mục spam |
-| Không thấy chatbot | Đăng nhập bằng Customer/Organizer hoạt động, không phải Admin |
-| AI thiếu thông tin/tạm gián đoạn | Đúng database, đã tạo chỉ mục, key/model/quota; xem hướng dẫn chatbot |
+| Không nhận lệnh / không tìm thấy Django | Cài công cụ, mở CMD mới; kích hoạt `venv` và cài requirements |
+| Docker chưa chạy hoặc trùng tên | Mở Docker Desktop, dùng container đã tạo; không xóa dữ liệu |
+| Không kết nối database | Dịch vụ PostgreSQL, DB/user/password/host/port và biến môi trường ghi đè |
+| `vector is not available` | Server PostgreSQL thiếu pgvector; dùng Docker ở bước 3 hoặc cài extension đúng server |
+| Trang trống | Backend có chạy, API URL đúng, database đã có sự kiện PUBLISHED chưa |
+| Vite dùng cổng khác 5173 | Dùng cổng Vite hiển thị và cập nhật `FRONTEND_URL` backend khi thử thanh toán |
+| Upload/thanh toán/email lỗi | Cấu hình dịch vụ phía trên và log backend; không tắt chữ ký PayOS để né lỗi |
+| Chatbot không hiện hoặc AI lỗi | Vai trò Customer/Organizer, dữ liệu RAG, key/model/quota; xem [AI Agent](../backend/ai_agent/README.md) |
 
-Tiếp theo: [dữ liệu mẫu](../database/README.md), [lệnh kiểm thử](TEST_COMMANDS.md) hoặc [danh mục tài liệu](README.md). Các lệnh trong tài liệu là hướng dẫn để bạn tự chạy; không có script cài đặt tự động đi kèm.
+Cần kiểm thử: xem [lệnh test](TEST_COMMANDS.md) hoặc [danh mục tài liệu](README.md). Đây là hướng dẫn chạy local, chưa có script cài đặt tự động.
